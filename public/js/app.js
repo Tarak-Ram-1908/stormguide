@@ -135,8 +135,14 @@
       h('div', { class: 'row-between' },
         h('strong', { text: '⛺ ' + s.name }),
         h('span', { class: 'badge ' + s.status, text: t('shelter.' + s.status) })),
-      h('div', { class: 'muted', text: [x.d != null ? SG.fmtDist(x.d) : null, s.status === 'open' ? t('shelter.left', { n: x.left }) : null, s.stepFree ? '♿ ' + t('shelter.stepfree') : null].filter(Boolean).join(' · ') })
+      h('div', { class: 'muted', text: [x.d != null && compact ? SG.fmtDist(x.d) : null, s.status === 'open' ? t('shelter.left', { n: x.left }) : null, s.stepFree ? '♿ ' + t('shelter.stepfree') : null].filter(Boolean).join(' · ') })
     ];
+    if (!compact && x.d != null) {
+      // Route ticket: you -> dashed route -> shelter, distance on the line (coral if it crosses danger).
+      lines.push(h('div', { class: 'route' + (x.route.length ? ' warn' : ''), attrs: { 'aria-hidden': 'true' } },
+        h('span', { class: 'pin you' }), h('span', { class: 'line' }, h('span', { text: SG.fmtDist(x.d) })), h('span', { class: 'pin dest', text: '⛺' })));
+      lines.push(h('div', { class: 'route-labels', attrs: { 'aria-hidden': 'true' } }, h('span', { text: t('map.you') }), h('span', { text: t('map.shelter') })));
+    }
     if (x.d != null && s.status === 'open') {
       lines.push(x.route.length
         ? h('div', { class: 'warn-text', text: '⚠ ' + t('shelter.route_warn', { name: x.route.join(', ') }) })

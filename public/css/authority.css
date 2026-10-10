@@ -1,21 +1,23 @@
 body.authority { padding-bottom: 16px; }
-.login { max-width: 380px; margin: 40px auto; }
+.login { max-width: 400px; margin: 48px auto; padding: 24px; border-radius: var(--r-lg); box-shadow: var(--shadow-2); }
 .console { padding: 10px; max-width: 1500px; margin: 0 auto; }
 .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; min-width: 120px; }
-.stat b { display: block; font-size: 1.4rem; }
-.stat.hot { background: var(--danger-bg); border-color: var(--danger); }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 14px; min-width: 128px; box-shadow: var(--shadow-1); }
+.stat b { display: block; font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.stat.hot { background: var(--coral-50); border-color: transparent; }
+.stat.hot b { color: #c9453a; }
 .console-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 900px) { .console-grid { grid-template-columns: 1fr; } }
 .map-col { position: sticky; top: 64px; }
 @media (max-width: 900px) { .map-col { position: static; } }
 .admin-map { height: calc(100vh - 160px); min-height: 380px; }
-.drawbar { position: absolute; top: 10px; left: 56px; right: 10px; z-index: 900; background: var(--card); border: 2px solid var(--accent); border-radius: 12px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; box-shadow: var(--shadow); }
+.drawbar { position: absolute; top: 10px; left: 56px; right: 10px; z-index: 900; background: var(--card); border: 2px solid var(--focus); border-radius: 12px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; box-shadow: var(--shadow); }
 .drawbar[hidden] { display: none; }
 .ptabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.ptabs button { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 7px 12px; cursor: pointer; font-size: .88rem; font-weight: 600; }
-.ptabs button.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-.count { display: inline-block; min-width: 1.5em; padding: 0 5px; border-radius: 999px; background: var(--danger); color: #fff; font-size: .75rem; }
+.ptabs button { border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); border-radius: 999px; padding: 7px 13px; cursor: pointer; font-size: .88rem; font-weight: 650; transition: all .15s var(--ease); }
+.ptabs button:hover { border-color: var(--primary); }
+.ptabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.count { display: inline-block; min-width: 1.5em; padding: 0 6px; border-radius: 999px; background: var(--coral); color: #fff; font-size: .75rem; text-align: center; }
 .count:empty { display: none; }
 .panel { max-height: calc(100vh - 170px); overflow: auto; padding-right: 2px; }
 @media (max-width: 900px) { .panel { max-height: none; } }
@@ -34,7 +36,7 @@ textarea.input { min-height: 80px; resize: vertical; }
 .sos-item.fresh { animation: flash 1.2s ease-in-out 3; }
 @keyframes flash { 50% { background: var(--danger-bg); } }
 .kv { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .88rem; color: var(--muted); margin: 4px 0; }
-.preview { background: var(--bg); border-radius: 10px; padding: 10px; margin-top: 8px; }
+.preview { background: var(--ocean-50); border-radius: var(--r-sm); padding: 12px; margin-top: 10px; }
 .preview ul { margin: 4px 0 0; padding-inline-start: 18px; }
 .inline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .inline .input { margin-top: 0; width: auto; flex: 1; min-width: 80px; }
@@ -47,3 +49,6 @@ textarea.input { min-height: 80px; resize: vertical; }
 code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: .85em; word-break: break-all; }
 .request-box { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 10px; }
 .me { font-size: .8rem; opacity: .85; }
+.sos-item { position: relative; }
+body.authority .topbar .lang-btn { white-space: nowrap; }
+@media (max-width: 640px) { body.authority .topbar { flex-wrap: wrap; } }
