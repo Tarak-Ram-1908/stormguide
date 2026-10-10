@@ -51,7 +51,7 @@
   // ------------------------------------------------------------ state + network
   SG.state = null;
   SG.meta = LS.get('sg.meta', { fetchedAt: 0, serverOffset: 0, etag: null });
-  SG.net = { online: navigator.onLine !== false, live: false, lastError: null };
+  SG.net = { online: navigator.onLine !== false, live: false, slow: false, lastError: null };
 
   SG.now = function () { return Date.now() + (SG.meta.serverOffset || 0); };
 
@@ -77,13 +77,20 @@
 
   var refreshing = null, refreshAgain = false;
   /** Fetch latest state. Falls back to cache after 3.5 s (slow or captive networks). */
-  SG.refresh = function () {
+  var slowRetrying = false;
+  /**
+   * Fetch latest state. The UI falls back to saved data after 3.5 s, but a slow
+   * connection is not the same as no connection: a timeout keeps trying in the
+   * background with a 20 s limit and is labelled "slow", not "offline".
+   */
+  SG.refresh = function (waitMs) {
     if (refreshing) { refreshAgain = true; return refreshing; } // a newer version arrived mid-fetch
     var headers = {};
     if (SG.state && SG.meta.etag) headers['If-None-Match'] = SG.meta.etag;
     var t0 = Date.now();
-    refreshing = fetchWithTimeout('/api/state', { headers: headers }, 3500).then(function (res) {
-      if (res.status === 304) { SG.meta.fetchedAt = Date.now(); LS.set('sg.meta', SG.meta); setOnline(true); SG.emit('net', SG.net); return false; }
+    var url = waitMs ? '/api/state?wait=1' : '/api/state';
+    refreshing = fetchWithTimeout(url, { headers: headers }, waitMs || 3500).then(function (res) {
+      if (res.status === 304) { SG.meta.fetchedAt = Date.now(); LS.set('sg.meta', SG.meta); SG.net.slow = false; setOnline(true); SG.emit('net', SG.net); return false; }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       // The service worker answers from its cache when the network fails; it marks that copy.
       var fromNetwork = res.headers.get('X-SG-From-Cache') !== '1';
@@ -92,8 +99,10 @@
           SG.meta.serverOffset = data.serverTime - Date.now() + (Date.now() - t0) / 2;
           SG.meta.fetchedAt = Date.now();
           SG.meta.etag = res.headers.get('ETag');
+          SG.net.slow = false;
           setOnline(true);
         } else {
+          SG.net.slow = false;
           setOnline(false, 'cached');
         }
         var prev = SG.state;
@@ -104,8 +113,15 @@
         return true;
       });
     }).catch(function (e) {
-      setOnline(false, e && e.name === 'AbortError' ? 'timeout' : 'offline');
+      var timedOut = e && e.name === 'AbortError' && navigator.onLine !== false;
+      SG.net.slow = timedOut;
+      setOnline(false, timedOut ? 'timeout' : 'offline');
+      SG.emit('net', SG.net);
       if (!SG.state) loadCachedState();
+      if (timedOut && !waitMs && !slowRetrying) {
+        slowRetrying = true;
+        setTimeout(function () { SG.refresh(20000).then(function () { slowRetrying = false; }); }, 0);
+      }
       return false;
     }).then(function (r) {
       refreshing = null;
@@ -139,7 +155,13 @@
   };
   function startPolling() {
     if (pollTimer) return;
-    pollTimer = setInterval(function () { if (!SG.net.live) SG.refresh(); }, 30000);
+    var ticks = 0;
+    // Every 10 s while offline (so we notice the network coming back fast), every 30 s otherwise.
+    pollTimer = setInterval(function () {
+      ticks++;
+      if (SG.net.live) return;
+      if (!SG.net.online || ticks % 3 === 0) SG.refresh();
+    }, 10000);
   }
 
   root.addEventListener('online', function () { SG.refresh(); SG.flush(); SG.connectLive(); });

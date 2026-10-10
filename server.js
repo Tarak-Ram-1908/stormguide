@@ -334,6 +334,21 @@ function publicConfig() {
 
 function round4(n) { return Math.round(n * 1e4) / 1e4; }
 
+function deviceHash(deviceId) {
+  return crypto.createHash('sha256').update(SECRET + deviceId).digest('base64url').slice(0, 16);
+}
+
+/** Count a device once per report. Returns true if this device had not counted yet. */
+function addConfirmation(priv, report, hash) {
+  const set = priv.confirmations[report.id] || (priv.confirmations[report.id] = []);
+  if (!hash) return false;
+  if (set.includes(hash)) return false;
+  set.push(hash);
+  return true;
+}
+
+const MERGE_KM = 0.15, MERGE_MS = 3 * 3600e3;
+
 function createReport(body, via) {
   V.obj(body);
   const r = {
@@ -350,10 +365,23 @@ function createReport(body, via) {
     via: V.oneOf(via || body.via, ['web', 'sms', 'relay'], 'via', { optional: true, def: 'web' }),
     urgent: false
   };
+  const device = body.deviceId ? V.str(body.deviceId, 'deviceId', { min: 8, max: 64 }) : null;
+  const hash = device ? deviceHash(device) : null;
   r.urgent = r.type === 'trapped' || r.type === 'injury';
-  return store.mutate((pub) => {
+  return store.mutate((pub, priv) => {
     const existing = pub.reports.find(x => x.id === r.id);
     if (existing) return { duplicate: true, report: existing };
+    // Same problem already reported close by and recently: count it as a confirmation instead of a new report.
+    const now = Date.now();
+    const near = pub.reports.find(x => x.type === r.type && (x.status === 'unverified' || x.status === 'verified') &&
+      now - Date.parse(x.createdAt) < MERGE_MS && Geo.distanceKm([x.lat, x.lng], [r.lat, r.lng]) <= MERGE_KM);
+    if (near) {
+      if (!hash || addConfirmation(priv, near, hash)) near.confirmations = (near.confirmations || 1) + 1;
+      if (r.note && !near.note) near.note = r.note;
+      if (r.people > (near.people || 0)) near.people = r.people;
+      return { duplicate: false, merged: true, report: near };
+    }
+    addConfirmation(priv, r, hash);
     pub.reports.push(r);
     return { duplicate: false, report: r };
   }, r.urgent ? { emit: { event: 'sos', data: { kind: 'report', id: r.id } } } : {});
@@ -493,19 +521,17 @@ route('GET', '/api/stream', (req, res, p, url) => handleStream(req, res, url));
 route('POST', '/api/reports', async (req, res) => {
   rateLimit(req, 'report', 20, 10);
   const r = createReport(await readBody(req), 'web');
-  sendJson(req, res, r.duplicate ? 200 : 201, { ok: true, id: r.report.id, status: r.report.status, duplicate: r.duplicate });
+  sendJson(req, res, r.duplicate || r.merged ? 200 : 201, { ok: true, id: r.report.id, status: r.report.status, duplicate: r.duplicate, merged: !!r.merged, confirmations: r.report.confirmations });
 });
 
 route('POST', '/api/reports/:id/confirm', async (req, res, p) => {
   rateLimit(req, 'confirm', 30, 10);
   const body = V.obj(await readBody(req));
   const device = V.str(body.deviceId, 'deviceId', { min: 8, max: 64 });
-  const hash = crypto.createHash('sha256').update(SECRET + device).digest('base64url').slice(0, 16);
+  const hash = deviceHash(device);
   const count = store.mutate((pub, priv) => {
     const r = findOr404(pub.reports, p.id, 'Report');
-    const set = priv.confirmations[r.id] || (priv.confirmations[r.id] = []);
-    if (!set.includes(hash)) set.push(hash);
-    r.confirmations = Math.max(r.confirmations || 1, 1 + set.length);
+    if (addConfirmation(priv, r, hash)) r.confirmations = (r.confirmations || 1) + 1;
     return r.confirmations;
   });
   sendJson(req, res, 200, { ok: true, confirmations: count });

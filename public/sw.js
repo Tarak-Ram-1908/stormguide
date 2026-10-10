@@ -95,7 +95,7 @@ self.addEventListener('fetch', function (event) {
   if (url.hostname === 'tile.openstreetmap.org') { event.respondWith(tile(req)); return; }
   if (url.origin !== self.location.origin) return; // weather API etc.: straight to network
 
-  if (url.pathname === '/api/state') { event.respondWith(networkFirst(req, DATA_CACHE, 4000, '/api/state')); return; }
+  if (url.pathname === '/api/state') { event.respondWith(networkFirst(req, DATA_CACHE, url.searchParams.has('wait') ? 20000 : 4000, '/api/state')); return; }
   if (url.pathname.indexOf('/api/') === 0) return; // live API (SSE, SOS status): never cached
 
   if (req.mode === 'navigate') {

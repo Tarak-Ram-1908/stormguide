@@ -51,14 +51,15 @@
     var pill = document.getElementById('net-pill');
     var live = SG.net.online && SG.net.live;
     pill.className = 'net-pill ' + (live ? 'live' : SG.net.online ? 'online' : 'offline');
-    document.getElementById('net-text').textContent = live ? t('net.live') : SG.net.online ? '●' : '⚠';
+    document.getElementById('net-text').textContent = live ? t('net.live') : SG.net.online ? '●' : SG.net.slow ? '◐' : '⚠';
+    if (!SG.net.online && SG.net.slow) pill.className = 'net-pill online';
 
     var bar = document.getElementById('databar');
     var age = SG.meta.fetchedAt ? Date.now() - SG.meta.fetchedAt : Infinity;
     var parts = [], cls = 'databar';
     if (!SG.state) { parts.push(t('net.never')); cls += ' bad'; }
     else {
-      if (!SG.net.online) { parts.push(t('net.offline')); cls += ' warn'; }
+      if (!SG.net.online) { parts.push(SG.net.slow ? t('net.slow') : t('net.offline')); cls += ' warn'; }
       if (isFinite(age)) parts.push(age < 60e3 ? t('net.now') : t('net.age', { age: SG.fmtAge(age) }));
       if (age > 3 * 3600e3) { parts.push(t('net.stale')); cls += ' bad'; }
     }
@@ -398,18 +399,48 @@
     var tick = function () {
       var s = sosGet();
       if (!s || s.s1 !== 'ok') return;
-      SG.fetchWithTimeout('/api/sos/' + encodeURIComponent(s.data.id), {}, 6000).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-        if (!d) return;
+      SG.fetchWithTimeout('/api/sos/' + encodeURIComponent(s.data.id), {}, 8000).then(function (r) {
+        if (r.status === 404) {
+          // The server no longer has this request (e.g. it restarted). Send it again with the same ID.
+          var c = sosGet(); if (!c) return null;
+          c.s1 = 'sending'; c.server = null; sosSave(c);
+          return OutboxDB.put({ id: c.data.id, kind: 'sos', url: '/api/sos', body: c.data, status: 'queued', attempts: 0, createdAt: Date.now() })
+            .then(function () { return SG.flush(); }).then(function () { return OutboxDB.get(c.data.id); }).then(function (item) {
+              var cur = sosGet(); if (!cur) return null;
+              if (item && item.status === 'sent') { cur.s1 = 'ok'; cur.server = item.response; cur.checkedAt = Date.now(); }
+              else { cur.s1 = 'fail'; if (cur.s2 === 'idle') cur.s2 = 'ready'; }
+              sosSave(cur);
+              return null;
+            });
+        }
+        return r.ok ? r.json() : null;
+      }).then(function (d) {
+        if (!d || !d.id) return;
         var cur = sosGet(); if (!cur || cur.data.id !== d.id) return;
         var changed = !cur.server || cur.server.status !== d.status || cur.server.etaMin !== d.etaMin;
         cur.server = d;
-        if (changed) { sosSave(cur); if (navigator.vibrate) navigator.vibrate(150); }
+        cur.checkedAt = Date.now();
+        SG.LS.set('sg.sos', cur);
+        if (changed) { renderSos(); if (navigator.vibrate) navigator.vibrate(150); }
+        else updateSosAge();
         if (d.status === 'resolved') clearInterval(sosPoll);
-      }).catch(function () { /* offline: keep last known */ });
+      }).catch(function () { updateSosAge(); /* offline: keep last known */ });
     };
     tick();
     sosPoll = setInterval(tick, 10000);
   }
+
+  /** Refresh only the "last update ... ago" line, without rebuilding the card. */
+  function updateSosAge() {
+    var el = document.getElementById('sos-age');
+    var s = sosGet();
+    if (!el || !s) return;
+    var age = s.checkedAt ? Date.now() - s.checkedAt : null;
+    el.textContent = age == null ? '' : age < 60e3 ? t('net.now') : t('sos.lastknown', { age: SG.fmtAge(age) });
+    el.className = 'small ' + (!SG.net.online || (age != null && age > 60e3) ? 'warn-text' : 'muted');
+  }
+
+  function clearSos() { clearInterval(sosPoll); SG.LS.del('sg.sos'); renderSos(); }
 
   function stepRow(n, label, state, extra) {
     var ICON = { idle: '○', sending: '⏳', ok: '✅', fail: '❌', skipped: '⏭️', ready: '👉', opened: '⏳' };
@@ -439,20 +470,32 @@
     }
     var callBtn = h('a', { class: 'btn ' + (s.s3 === 'ready' ? 'danger block' : 'block'), text: '📞 ' + t('sos.call'), attrs: { href: 'tel:112' }, onclick: function () { var c = sosGet(); c.s3 = 'opened'; SG.LS.set('sg.sos', c); } });
     var s2state = s.s1 === 'ok' && s.s2 === 'idle' ? 'idle' : s.s2;
+    var delivered = s.s1 === 'ok';
+    var resolved = delivered && s.server && s.server.status === 'resolved';
+    var step2 = stepRow(2, t('sos.step2'), delivered ? (s.s2 === 'idle' ? 'idle' : s2state) : s2state, step2Extra);
+    var step3 = stepRow(3, t('sos.step3'), s.s3 === 'ready' ? 'ready' : s.s3 === 'opened' ? 'ok' : 'idle', callBtn);
+    var age = s.checkedAt ? Date.now() - s.checkedAt : null;
     return [
-      h('div', { class: 'card sos-active' + (s.s1 === 'ok' ? ' ok' : '') },
+      h('div', { class: 'card sos-active' + (delivered ? ' ok' : '') },
         h('h2', { text: '🆘 ' + t('sos.active') }),
         h('div', { class: 'muted', text: t('sos.id', { id: d.id }) + ' · ' + SG.fmtTime(new Date(s.startedAt).toISOString()) }),
         d.lat == null ? h('div', { class: 'warn-text', text: t('risk.unknown') }) : h('div', { class: 'muted', text: '📍 ' + d.lat.toFixed(5) + ', ' + d.lng.toFixed(5) }),
-        serverText ? h('div', { class: 'server-status', text: serverText }) : null,
-        h('ol', { class: 'steps' },
-          stepRow(1, t('sos.step1'), s.s1, s.s1 === 'fail' || s.s1 === 'skipped' ? h('div', { class: 'muted small', text: t('sos.queued') }) : null),
-          stepRow(2, t('sos.step2'), s.s1 === 'ok' ? (s.s2 === 'idle' ? 'idle' : s2state) : s2state, step2Extra),
-          stepRow(3, t('sos.step3'), s.s3 === 'ready' ? 'ready' : s.s3 === 'opened' ? 'ok' : 'idle', callBtn)),
-        h('p', { class: 'stay', text: t('sos.stay') }),
+        serverText ? h('div', { class: 'server-status' + (!SG.net.online ? ' stale' : '') }, serverText,
+          h('div', { id: 'sos-age', class: 'small ' + (!SG.net.online || (age != null && age > 60e3) ? 'warn-text' : 'muted'), text: age == null ? '' : age < 60e3 ? t('net.now') : t('sos.lastknown', { age: SG.fmtAge(age) }) })) : null,
+        // Once the control room has the request, SMS / 112 become backup options (folded away).
+        delivered
+          ? h('ol', { class: 'steps' }, stepRow(1, t('sos.step1'), 'ok'),
+            h('li', { class: 'step backup' }, h('details', { open: s.s2 === 'opened' || s.s3 === 'ready' },
+              h('summary', { text: t('sos.backup') }), h('ol', { class: 'steps' }, step2, step3))))
+          : h('ol', { class: 'steps' },
+            stepRow(1, t('sos.step1'), s.s1, s.s1 === 'fail' || s.s1 === 'skipped' ? h('div', { class: 'muted small', text: t('sos.queued') }) : null),
+            step2, step3),
+        resolved ? null : h('p', { class: 'stay', text: t('sos.stay') }),
         h('div', { class: 'btn-row' },
-          h('button', { class: 'btn', text: '🔳 ' + t('sos.qr'), onclick: function () { showRelayQr('sos', d); } }),
-          h('button', { class: 'btn ghost', text: t('sos.new'), onclick: function () { clearInterval(sosPoll); SG.LS.del('sg.sos'); renderSos(); } })))
+          resolved ? null : h('button', { class: 'btn', text: '🔳 ' + t('sos.qr'), onclick: function () { showRelayQr('sos', d); } }),
+          h('button', { class: resolved ? 'btn primary' : 'btn ghost', text: resolved ? '✓ ' + t('common.done') : t('sos.new'), onclick: function () {
+            if (resolved || window.confirm(t('sos.new') + '?')) clearSos();
+          } })))
     ];
   }
 
@@ -534,7 +577,7 @@
     children.push(note);
     children.push(locationLine() || h('div', { class: 'warn-text', text: t('rep.loc_needed') }));
     children.push(h('div', { class: 'btn-row' },
-      h('button', { class: 'btn primary', text: '📣 ' + t('rep.send'), disabled: !repDraft.type, onclick: submitReport }),
+      h('button', { class: 'btn primary', text: '📣 ' + t('rep.send'), disabled: !repDraft.type, onclick: function () { submitReport(false); } }),
       h('button', { class: 'btn ghost', text: '🗺️ ' + t('loc.set'), onclick: pickOnMap })));
     if (lastQueued) {
       children.push(h('div', { class: 'card warn queued-box' },
@@ -546,14 +589,52 @@
     UI.mount('report-form', h('div', { class: 'card' }, children));
   }
 
-  function submitReport() {
+  /** Same type, still open, within 200 m and 3 h: probably the same problem someone already reported. */
+  function seenBy(n) { return (n || 1) > 1 ? t('rep.confirmed', { n: n }) : ''; }
+
+  function findSimilarReport(type, p) {
+    if (!SG.state) return null;
+    var best = null;
+    SG.state.reports.forEach(function (r) {
+      if (r.type !== type || (r.status !== 'unverified' && r.status !== 'verified')) return;
+      if (SG.now() - Date.parse(r.createdAt) > 3 * 3600e3) return;
+      var d = Geo.distanceKm(p, [r.lat, r.lng]);
+      if (d <= 0.2 && (!best || d < best.d)) best = { r: r, d: d };
+    });
+    return best;
+  }
+
+  function submitReport(force) {
     var p = SG.point();
     if (!p) { UI.toast(t('rep.loc_needed'), 'warn'); return; }
     if (!repDraft.type) return;
-    var body = { id: SG.rid(10), type: repDraft.type, lat: p[0], lng: p[1], note: repDraft.note.slice(0, 200), people: repDraft.people, ts: Date.now(), lang: SG.lang() };
+    var similar = force ? null : findSimilarReport(repDraft.type, p);
+    if (similar) {
+      var r = similar.r, already = SG.prefs.confirmed[r.id];
+      UI.modal([
+        h('h3', { text: REPORT_ICON[r.type] + ' ' + t('rpt.' + r.type) }),
+        h('p', { text: t('rep.dup', { dist: SG.fmtDist(similar.d) }) }),
+        r.note ? h('div', { class: 'claim', text: r.note }) : null,
+        h('div', { class: 'muted small', text: reportStatusLabel(r.status) + ' · ' + seenBy(r.confirmations) }),
+        h('div', { class: 'btn-row' },
+          already ? h('div', { class: 'ok-text', text: '✓ ' + seenBy(r.confirmations) }) :
+            h('button', { class: 'btn primary', text: '👁 ' + t('rep.confirm'), onclick: function () { UI.closeModal(); repDraft = { type: null, note: '', people: 0 }; confirmReport(r.id); UI.toast('✅ ' + t('rep.merged'), 'ok'); renderReportForm(); } }),
+          h('button', { class: 'btn', text: t('rep.send'), onclick: function () { UI.closeModal(); submitReport(true); } }),
+          h('button', { class: 'btn ghost', text: t('common.cancel'), onclick: UI.closeModal }))
+      ]);
+      return;
+    }
+    var body = { id: SG.rid(10), type: repDraft.type, lat: p[0], lng: p[1], note: repDraft.note.slice(0, 200), people: repDraft.people, ts: Date.now(), lang: SG.lang(), deviceId: SG.prefs.deviceId };
+    SG.prefs.confirmed[body.id] = true; SG.savePrefs(); // you can't "confirm" your own report
     SG.queue('report', '/api/reports', body).then(function () { return SG.flush(); }).then(function () { return OutboxDB.get(body.id); }).then(function (item) {
       repDraft = { type: null, note: '', people: 0 };
-      if (item && item.status === 'sent') { lastQueued = null; UI.toast('✅ ' + t('rep.sent'), 'ok'); SG.refresh(); }
+      if (item && item.status === 'sent') {
+        lastQueued = null;
+        var resp = item.response || {};
+        if (resp.merged) { SG.prefs.confirmed[resp.id] = true; SG.savePrefs(); UI.toast('✅ ' + t('rep.merged') + ' · ' + t('rep.confirmed', { n: resp.confirmations || 2 }), 'ok', 5000); }
+        else UI.toast('✅ ' + t('rep.sent'), 'ok');
+        SG.refresh();
+      }
       else if (item && item.status === 'failed') { lastQueued = null; UI.toast(t('rep.failed') + ': ' + (item.lastError || ''), 'warn', 6000); }
       else { lastQueued = body; UI.toast('💾 ' + t('rep.saved'), 'warn', 6000); }
       renderReports();
@@ -571,7 +652,7 @@
       var byId = {};
       (SG.state ? SG.state.reports : []).forEach(function (r) { byId[r.id] = r; });
       UI.mount('my-reports', mine.map(function (x) {
-        var server = byId[x.id];
+        var server = byId[x.id] || (x.response && x.response.id && byId[x.response.id]);
         var label = x.status === 'queued' ? '⏳ ' + t('rep.queued') : x.status === 'failed' ? '❌ ' + t('rep.failed') : server ? reportStatusLabel(server.status) : '✅ ' + t('rep.sent');
         return h('div', { class: 'card list-row' },
           h('span', { text: REPORT_ICON[x.body.type] + ' ' + t('rpt.' + x.body.type) + (x.body.note ? ' — ' + x.body.note : '') }),
@@ -592,7 +673,7 @@
       return h('div', { class: 'card report ' + r.status },
         h('div', { class: 'row-between' }, h('strong', { text: REPORT_ICON[r.type] + ' ' + t('rpt.' + r.type) }), h('span', { class: 'rep-status ' + r.status, text: reportStatusLabel(r.status) })),
         r.note ? h('div', { class: 'claim', text: r.note }) : null,
-        h('div', { class: 'muted small', text: [x.d != null ? SG.fmtDist(x.d) : null, SG.fmtAge(SG.now() - Date.parse(r.createdAt)), t('rep.confirmed', { n: r.confirmations || 1 })].filter(Boolean).join(' · ') }),
+        h('div', { class: 'muted small', text: [x.d != null ? SG.fmtDist(x.d) : null, SG.fmtAge(SG.now() - Date.parse(r.createdAt)), seenBy(r.confirmations)].filter(Boolean).join(' · ') }),
         canConfirm ? h('button', { class: 'btn small', text: '👁 ' + t('rep.confirm'), onclick: function () { confirmReport(r.id); } }) : null);
     }) : h('div', { class: 'muted card', text: '—' }));
   }
@@ -717,7 +798,7 @@
   }
 
   SG.on('state', onNewState);
-  SG.on('net', renderNet);
+  SG.on('net', function () { renderNet(); updateSosAge(); var c = document.querySelector('.server-status'); if (c) c.classList.toggle('stale', !SG.net.online); });
   SG.on('location', function () { renderStatus(); renderSos(); SGMap.renderYou(); SGMap.render(); if (currentView === 'report') renderReportForm(); renderWeather(); });
   SG.on('outbox', function (r) {
     if (r && r.sent) { SG.refresh(); }
@@ -754,7 +835,15 @@
   SG.connectLive();
   SG.flush();
   OutboxDB.cleanup(7);
-  if (sosGet() && sosGet().s1 === 'ok') trackSos();
+  (function () {
+    var s = sosGet();
+    if (!s) return;
+    var ageMs = Date.now() - (s.startedAt || 0);
+    var resolvedLongAgo = s.server && s.server.status === 'resolved' && s.checkedAt && Date.now() - s.checkedAt > 3600e3;
+    if (ageMs > 24 * 3600e3 || resolvedLongAgo) { SG.LS.del('sg.sos'); renderSos(); return; }
+    if (s.s1 === 'ok') trackSos();
+    else if (s.s1 === 'sending') runStep1(); // the page was closed while sending: try again
+  })();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {

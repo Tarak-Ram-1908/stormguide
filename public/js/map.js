@@ -110,7 +110,7 @@
         .bindPopup(popupNode(t('rpt.' + r.type), [
           { text: verified ? '✔ ' + t('rep.verified') : '? ' + t('rep.unverified'), cls: verified ? 'ok' : 'warn' },
           { text: r.note || '' },
-          { text: t('rep.confirmed', { n: r.confirmations || 1 }) + ' · ' + SG.fmtAge(SG.now() - Date.parse(r.createdAt)), cls: 'muted' }
+          { text: ((r.confirmations || 1) > 1 ? t('rep.confirmed', { n: r.confirmations }) + ' · ' : '') + SG.fmtAge(SG.now() - Date.parse(r.createdAt)), cls: 'muted' }
         ]))
         .addTo(layers.reports);
     });

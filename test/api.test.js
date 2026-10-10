@@ -165,3 +165,16 @@ test('hosts: access request -> approve -> new host logs in; PIN change; founders
   assert.ok((await login('b@test.org', '9876')).token);
   await post('/api/admin/reset', { scenario: 'chennai-flood' }, H2);
 });
+
+test('same problem reported twice nearby is merged; same device counts once', async () => {
+  const a = await (await post('/api/reports', { id: 'dup-a-1', type: 'building_damage', lat: 13.05, lng: 80.25, deviceId: 'device-one-111' })).json();
+  assert.equal(a.merged, false);
+  const b = await (await post('/api/reports', { id: 'dup-b-1', type: 'building_damage', lat: 13.0505, lng: 80.2504, deviceId: 'device-two-222' })).json();
+  assert.equal(b.merged, true); assert.equal(b.id, 'dup-a-1'); assert.equal(b.confirmations, 2);
+  const c = await (await post('/api/reports', { id: 'dup-c-1', type: 'building_damage', lat: 13.0503, lng: 80.2502, deviceId: 'device-one-111' })).json();
+  assert.equal(c.merged, true); assert.equal(c.confirmations, 2, 'reporter cannot inflate the count');
+  const conf = await (await post('/api/reports/dup-a-1/confirm', { deviceId: 'device-two-222' })).json();
+  assert.equal(conf.confirmations, 2, 'already counted device does not add again');
+  const far = await (await post('/api/reports', { id: 'dup-d-1', type: 'building_damage', lat: 13.07, lng: 80.25, deviceId: 'device-three-3' })).json();
+  assert.equal(far.merged, false, '2 km away is a different report');
+});

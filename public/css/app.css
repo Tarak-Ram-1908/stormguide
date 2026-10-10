@@ -269,3 +269,6 @@ details summary { cursor: pointer; color: var(--primary); font-weight: 600; font
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
 .btn.speaking { background: var(--danger); color: #fff; border-color: transparent; }
+.server-status.stale { background: var(--warn-bg); color: var(--warn); }
+.step.backup { display: block; }
+.step.backup summary { min-height: 36px; }
