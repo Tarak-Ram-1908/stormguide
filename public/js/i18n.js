@@ -17,6 +17,7 @@
     { code: 'en', name: 'English', dir: 'ltr', tts: 'en-IN' },
     { code: 'ta', name: 'தமிழ்', dir: 'ltr', tts: 'ta-IN' },
     { code: 'hi', name: 'हिन्दी', dir: 'ltr', tts: 'hi-IN' },
+    { code: 'te', name: 'తెలుగు', dir: 'ltr', tts: 'te-IN' },
     { code: 'fr', name: 'Français', dir: 'ltr', tts: 'fr-FR' },
     { code: 'de', name: 'Deutsch', dir: 'ltr', tts: 'de-DE' },
     { code: 'es', name: 'Español', dir: 'ltr', tts: 'es-ES' },

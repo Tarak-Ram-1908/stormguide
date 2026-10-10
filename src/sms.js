@@ -23,7 +23,7 @@ const TYPE_CODES = {
   OTHER: 'other'
 };
 const SIT_CODES = { TRAP: 'trapped', INJ: 'injured', WATER: 'water_rising', MED: 'medical', OTHER: 'other' };
-const LANGS = ['en', 'ta', 'hi', 'fr', 'de', 'es', 'zh', 'ja', 'ar'];
+const LANGS = ['en', 'ta', 'hi', 'te', 'fr', 'de', 'es', 'zh', 'ja', 'ar'];
 
 const COORD_RE = /(-?\d{1,2}\.\d{2,8})\s*,\s*(-?\d{1,3}\.\d{2,8})/;
 
