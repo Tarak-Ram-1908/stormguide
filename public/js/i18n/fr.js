@@ -153,6 +153,8 @@
   'map.closure': 'Route fermée', 'map.you': 'Vous', 'map.shelter': 'Abri', 'map.alertarea': 'Zone d’alerte', 'map.legend': 'Légende',
   'common.close': 'Fermer', 'common.cancel': 'Annuler', 'common.done': 'Terminé', 'common.retry': 'Réessayer',
   'about.title': 'À propos et sources',
+  'about.text': 'Alertes officielles dans votre langue (consignes fixes pré-traduites), zones dangereuses, abris et SOS qui passe d’Internet au SMS puis au 112. Carte © contributeurs OpenStreetMap. Météo : Open-Meteo. Niveaux de pluie : échelle IMD.',
+  'about.officials': 'Centre de contrôle (pour les autorités) →',
   'install': 'Installer l’appli',
   'relay.title': 'Aidez à transmettre un message d’urgence',
   'relay.desc': 'Une personne sans Internet vous demande de transmettre ce message. Il sera envoyé au centre de contrôle.',

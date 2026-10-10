@@ -272,3 +272,4 @@ details summary { cursor: pointer; color: var(--primary); font-weight: 600; font
 .server-status.stale { background: var(--warn-bg); color: var(--warn); }
 .step.backup { display: block; }
 .step.backup summary { min-height: 36px; }
+.click-catcher { position: absolute; inset: 0; z-index: 650; cursor: crosshair; background: rgba(255, 184, 28, .07); touch-action: none; }

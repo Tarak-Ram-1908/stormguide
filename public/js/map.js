@@ -54,9 +54,19 @@
     setTimeout(function () { map.invalidateSize({ pan: false }); }, 300);
   };
 
+  var removeCatcher = null;
   M.pick = function (cb) {
+    if (!map) return;
     picking = true; onPick = cb;
-    if (map) map.getContainer().classList.add('picking');
+    map.closePopup();
+    map.getContainer().classList.add('picking');
+    if (removeCatcher) removeCatcher();
+    removeCatcher = UI.clickCatcher(map, function (ll) {
+      removeCatcher(); removeCatcher = null;
+      picking = false;
+      map.getContainer().classList.remove('picking');
+      if (onPick) onPick([ll.lat, ll.lng]);
+    });
   };
 
   M.focus = function (point, zoom) { if (map && point) map.setView(point, zoom || Math.max(map.getZoom(), 15)); };

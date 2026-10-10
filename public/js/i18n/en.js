@@ -153,6 +153,8 @@
   'map.closure': 'Road closed', 'map.you': 'You', 'map.shelter': 'Shelter', 'map.alertarea': 'Alert area', 'map.legend': 'Legend',
   'common.close': 'Close', 'common.cancel': 'Cancel', 'common.done': 'Done', 'common.retry': 'Try again',
   'about.title': 'About and data sources',
+  'about.text': 'Official alerts in your language (fixed, pre-translated instructions), danger zones, shelters, and SOS that falls back from internet to SMS to 112. Map © OpenStreetMap contributors. Weather: Open-Meteo. Rain levels: IMD scale.',
+  'about.officials': 'Control room (for officials) →',
   'install': 'Install app',
   'relay.title': 'Help relay an emergency message',
   'relay.desc': 'Someone without internet asked you to pass on this message. It will be sent to the control room.',

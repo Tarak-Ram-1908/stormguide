@@ -153,6 +153,8 @@
   'map.closure': 'Calle cerrada', 'map.you': 'Tú', 'map.shelter': 'Refugio', 'map.alertarea': 'Zona de alerta', 'map.legend': 'Leyenda',
   'common.close': 'Cerrar', 'common.cancel': 'Cancelar', 'common.done': 'Hecho', 'common.retry': 'Reintentar',
   'about.title': 'Acerca de y fuentes',
+  'about.text': 'Alertas oficiales en tu idioma (instrucciones fijas ya traducidas), zonas de peligro, refugios y un SOS que pasa de internet a SMS y al 112. Mapa © colaboradores de OpenStreetMap. Tiempo: Open-Meteo. Niveles de lluvia: escala IMD.',
+  'about.officials': 'Centro de control (para autoridades) →',
   'install': 'Instalar app',
   'relay.title': 'Ayuda a transmitir un mensaje de emergencia',
   'relay.desc': 'Alguien sin internet te pide que transmitas este mensaje. Se enviará al centro de control.',

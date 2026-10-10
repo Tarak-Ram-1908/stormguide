@@ -81,7 +81,7 @@
   function demoMenu() {
     var places = (SG.state && SG.state.demoPlaces) || [];
     return h('div', { class: 'chip-row' }, places.map(function (p) {
-      return h('button', { class: 'chip', text: p.name, onclick: function () { SG.setDemo(p.id); } });
+      return h('button', { class: 'chip', text: p.name, onclick: function () { SG.setDemo(p.id); if (!document.getElementById('modal').hidden) UI.closeModal(); } });
     }));
   }
 
@@ -155,8 +155,13 @@
     var box = document.getElementById('shelter-card');
     if (!SG.state) return UI.clear(box);
     var list = SG.shelters();
-    var best = list.filter(function (x) { return x.s.status === 'open' && !x.inDanger; })[0];
+    var usable = list.filter(function (x) { return x.s.status === 'open' && !x.inDanger; });
+    var best = usable[0];
+    // Prefer a shelter whose direct line avoids known danger, if it is not much farther.
+    var safer = usable.filter(function (x) { return !x.route.length; })[0];
+    if (best && safer && best.route.length && safer.d != null && safer.d <= best.d * 1.5) best = safer;
     if (!SG.point()) return UI.clear(box);
+    if (best && best.d > 50) return UI.clear(box); // far from the active area: a shelter 1700 km away is not "nearest"
     if (!best) return UI.mount(box, h('div', { class: 'card warn', text: t('shelter.none') + ' — ' + t('sos.call') }));
     UI.mount(box, h('h2', { class: 'section-title', text: t('shelter.nearest') }), shelterCard(best),
       h('details', { class: 'more-shelters' }, h('summary', { text: t('shelter.list') + ' (' + list.length + ')' }),
@@ -217,7 +222,7 @@
       h('span', { class: 'alert-ico', text: EVENT_ICON[a.event] || '⚠️' }),
       h('div', null,
         h('div', { class: 'alert-title', text: tr.event + ' · ' + tr.severity }),
-        h('div', { class: 'muted', text: a.area ? a.area.name : '' })),
+        h('div', { class: 'muted', attrs: { dir: 'auto' }, text: a.area ? a.area.name : '' })),
       st !== 'active' ? h('span', { class: 'badge closed', text: st === 'cancelled' ? t('alerts.cancelled') : '⌛' }) :
         a.msgType === 'Update' ? h('span', { class: 'badge', text: t('alerts.updated') }) : null);
     var body = [head];
@@ -254,7 +259,7 @@
     UI.mount('rumors', list.length ? [list.map(function (r) {
       return h('div', { class: 'card rumor ' + r.verdict },
         h('div', { class: 'row-between' }, h('strong', { text: t('rt.' + r.topic) }), h('span', { class: 'verdict ' + r.verdict, text: t('rumor.' + r.verdict) })),
-        h('div', { class: 'claim', text: '“' + r.claim + '”' }));
+        h('div', { class: 'claim', attrs: { dir: 'auto' }, text: '“' + r.claim + '”' }));
     }), h('p', { class: 'fineprint', text: t('rumor.tip') })] : null);
   }
 
@@ -614,7 +619,7 @@
       UI.modal([
         h('h3', { text: REPORT_ICON[r.type] + ' ' + t('rpt.' + r.type) }),
         h('p', { text: t('rep.dup', { dist: SG.fmtDist(similar.d) }) }),
-        r.note ? h('div', { class: 'claim', text: r.note }) : null,
+        r.note ? h('div', { class: 'claim', attrs: { dir: 'auto' }, text: r.note }) : null,
         h('div', { class: 'muted small', text: reportStatusLabel(r.status) + ' · ' + seenBy(r.confirmations) }),
         h('div', { class: 'btn-row' },
           already ? h('div', { class: 'ok-text', text: '✓ ' + seenBy(r.confirmations) }) :
@@ -672,7 +677,7 @@
       var canConfirm = r.status === 'unverified' && !mine;
       return h('div', { class: 'card report ' + r.status },
         h('div', { class: 'row-between' }, h('strong', { text: REPORT_ICON[r.type] + ' ' + t('rpt.' + r.type) }), h('span', { class: 'rep-status ' + r.status, text: reportStatusLabel(r.status) })),
-        r.note ? h('div', { class: 'claim', text: r.note }) : null,
+        r.note ? h('div', { class: 'claim', attrs: { dir: 'auto' }, text: r.note }) : null,
         h('div', { class: 'muted small', text: [x.d != null ? SG.fmtDist(x.d) : null, SG.fmtAge(SG.now() - Date.parse(r.createdAt)), seenBy(r.confirmations)].filter(Boolean).join(' · ') }),
         canConfirm ? h('button', { class: 'btn small', text: '👁 ' + t('rep.confirm'), onclick: function () { confirmReport(r.id); } }) : null);
     }) : h('div', { class: 'muted card', text: '—' }));
@@ -752,11 +757,11 @@
         if (e.target.checked) SG.enableNotifications().then(function (ok) { if (!ok) e.target.checked = false; });
         else { SG.prefs.notif = false; SG.savePrefs(); }
       } }), h('span', { text: t('notif.enable') }))),
-      section('👪 SMS', [h('label', { class: 'field-label', text: '☎️ +91… / +33…' }), h('input', { class: 'input', type: 'tel', value: SG.prefs.contactPhone, maxLength: 20, attrs: { placeholder: '+44 7700 900123', inputmode: 'tel' }, onchange: function (e) { SG.prefs.contactPhone = e.target.value.replace(/[^\d+]/g, ''); SG.savePrefs(); } })]),
+      section('👪 SMS', [h('label', { class: 'field-label', text: '☎️ +91… / +33…' }), h('input', { class: 'input', type: 'tel', value: SG.prefs.contactPhone, maxLength: 20, attrs: { placeholder: '+44 7700 900123', inputmode: 'tel' }, onchange: function (e) { SG.prefs.contactPhone = e.target.value.replace(/[^\d+]/g, ''); SG.savePrefs(); renderMore(); } })]),
       installEvt ? section('📲 ' + t('install'), h('button', { class: 'btn primary', text: t('install'), onclick: function () { installEvt.prompt(); installEvt = null; renderMore(); } })) : null,
       section('ℹ️ ' + t('about.title'), [
-        h('p', { class: 'small', text: 'StormGuide — official alerts with fixed-vocabulary translation, danger zones, shelters, SOS with internet → SMS → 112 fallback. Map © OpenStreetMap contributors. Weather: Open-Meteo. Thresholds: IMD rainfall categories. ' + (SG.state && SG.state.region.demo ? t('demo.badge') : '') }),
-        h('a', { class: 'link', text: 'Control room (officials) →', attrs: { href: '/authority.html' } })
+        h('p', { class: 'small', text: t('about.text') + (SG.state && SG.state.region.demo ? ' ' + t('demo.badge') : '') }),
+        h('a', { class: 'link', text: t('about.officials'), attrs: { href: '/authority.html' } })
       ]));
   }
 

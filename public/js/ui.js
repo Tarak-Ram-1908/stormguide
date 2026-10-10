@@ -82,6 +82,22 @@
     return wrap;
   };
 
+  /**
+   * While picking a point or drawing on a Leaflet map, put a transparent layer on top so a
+   * tap always lands on the map, even on top of an existing zone or marker (which would
+   * otherwise swallow the tap and open its popup). Returns a function that removes it.
+   */
+  UI.clickCatcher = function (map, onLatLng) {
+    var el = document.createElement('div');
+    el.className = 'click-catcher';
+    el.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      onLatLng(map.mouseEventToLatLng(e));
+    });
+    map.getContainer().appendChild(el);
+    return function () { if (el.parentNode) el.parentNode.removeChild(el); };
+  };
+
   /** base64url for UTF-8 JSON (used in QR relay links). */
   UI.b64encode = function (obj) {
     var s = unescape(encodeURIComponent(JSON.stringify(obj)));

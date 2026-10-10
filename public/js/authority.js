@@ -32,7 +32,7 @@
   }
   function act(promise, okMsg) {
     return promise.then(function (d) { if (okMsg) UI.toast('✅ ' + okMsg, 'ok'); return reload().then(function () { return d; }); })
-      .catch(function (e) { UI.toast('❌ ' + e.message, 'danger', 6000); throw e; });
+      .catch(function (e) { UI.toast('❌ ' + e.message, 'danger', 6000); return null; });
   }
 
   function reload() {
@@ -202,6 +202,14 @@
       mode !== 'point' ? h('button', { class: 'btn small primary', text: 'Finish', onclick: finishDraw }) : null,
       h('button', { class: 'btn small ghost', text: 'Cancel', onclick: cancelDraw }));
     map.getContainer().classList.add('picking');
+    map.closePopup();
+    if (draw.removeCatcher) draw.removeCatcher();
+    draw.removeCatcher = UI.clickCatcher(map, function (ll) {
+      if (!draw) return;
+      draw.pts.push([+ll.lat.toFixed(6), +ll.lng.toFixed(6)]);
+      if (draw.mode === 'point') return finishDraw();
+      renderDraw();
+    });
     renderDraw();
   }
   function renderDraw() {
@@ -217,6 +225,7 @@
     var d = draw; cancelDraw(); d.cb(d.mode === 'point' ? d.pts[0] : d.pts);
   }
   function cancelDraw() {
+    if (draw && draw.removeCatcher) draw.removeCatcher();
     draw = null; layers.draw.clearLayers();
     document.getElementById('drawbar').hidden = true;
     map.getContainer().classList.remove('picking');
@@ -398,7 +407,7 @@
       id: d.id || undefined, event: d.event, severity: d.severity, source: d.source, originalLang: d.originalLang,
       headline: d.headline, description: d.description, instructions: d.instructions,
       area: { name: d.areaName || 'Affected area', polygon: d.polygon }, expiresInHours: d.expiresInHours
-    }), d.id ? 'Alert updated — phones notified' : 'Alert published — phones notified').then(function () { alertDraft = newDraft(); renderPanelForce(); });
+    }), d.id ? 'Alert updated — phones notified' : 'Alert published — phones notified').then(function (ok) { if (ok) { alertDraft = newDraft(); renderPanelForce(); } });
   }
   function renderPanelForce() { if (panel === 'hosts') return pHosts(); UI.mount('panel', ({ sos: pSos, reports: pReports, alert: pAlert, zones: pZones, shelters: pShelters, rumors: pRumors, sms: pSms, sim: pSim })[panel]()); }
 
@@ -414,7 +423,7 @@
         h('div', { class: 'grid2' }, field('Kind', select(VOC.zoneKinds.map(function (k) { return [k, T('zone.' + k)]; }), zoneDraft.kind, function (e) { zoneDraft.kind = e.target.value; })), field('Circle radius (km)', radius)),
         field('Name', name),
         h('div', { class: 'btn-row' },
-          h('button', { class: 'btn', text: '✏️ Draw polygon', onclick: function () { if (needName(zoneDraft.name)) startDraw('polygon', function (pts) { act(api('POST', '/api/admin/zones', { kind: zoneDraft.kind, name: zoneDraft.name, polygon: pts }), 'Zone added').then(function () { zoneDraft.name = ''; }); }); } }),
+          h('button', { class: 'btn', text: '✏️ Draw polygon', onclick: function () { if (needName(zoneDraft.name)) startDraw('polygon', function (pts) { act(api('POST', '/api/admin/zones', { kind: zoneDraft.kind, name: zoneDraft.name, polygon: pts }), 'Zone added').then(function (ok) { if (ok) zoneDraft.name = ''; }); }); } }),
           h('button', { class: 'btn', text: '⭕ Circle (click centre)', onclick: function () { if (needName(zoneDraft.name)) startDraw('point', function (c) { act(api('POST', '/api/admin/zones', { kind: zoneDraft.kind, name: zoneDraft.name, center: c, radiusKm: zoneDraft.radius }), 'Zone added').then(function () { zoneDraft.name = ''; }); }); } }))),
       h('div', { class: 'card' }, h('h3', { text: 'Zones (' + state.zones.length + ')' }), state.zones.map(function (z) {
         return h('div', { class: 'list-row' }, h('span', { text: T('zone.' + z.kind) + ' — ' + z.name }), h('span', { class: 'inline' },
@@ -467,7 +476,8 @@
   function pSms() {
     var from = h('input', { class: 'input', value: '+91 98400 00000', maxLength: 32 });
     var body = h('textarea', { class: 'input', value: 'SOS 13.04001,80.23370 P:2 S:TRAP L:fr ID:demo' + Math.floor(Math.random() * 1e6) + ' water rising' });
-    var out = h('div', { class: 'preview', hidden: true });
+    var out = h('div', { class: 'preview', hidden: !lastSms });
+    if (lastSms) renderSmsResult(out, lastSms);
     var base = location.origin;
     return h('div', { class: 'card' },
       h('h3', { text: 'SMS gateway' }),
@@ -478,14 +488,20 @@
       field('From', from), field('Message', body),
       h('button', { class: 'btn primary', text: 'Process SMS', onclick: function () {
         api('POST', '/api/admin/sms-sim', { from: from.value, body: body.value }).then(function (d) {
+          lastSms = d;
           out.hidden = false;
-          UI.mount(out, h('strong', { text: d.ok ? '✅ Parsed as ' + d.parsed.kind : '❌ Not understood (' + (d.parsed && d.parsed.error) + ')' }),
-            h('pre', { class: 'small', style: 'white-space:pre-wrap', text: JSON.stringify(d.parsed && d.parsed.data, null, 1) }),
-            h('div', { class: 'small', text: 'Auto-reply SMS: ' + d.reply }));
+          renderSmsResult(out, d);
           reload();
         }).catch(function (e) { UI.toast(e.message, 'danger'); });
       } }),
       out);
+  }
+
+  var lastSms = null;
+  function renderSmsResult(out, d) {
+    UI.mount(out, h('strong', { text: d.ok ? '✅ Parsed as ' + d.parsed.kind : '❌ Not understood (' + (d.parsed && d.parsed.error) + ')' }),
+      h('pre', { class: 'small', style: 'white-space:pre-wrap', text: JSON.stringify(d.parsed && d.parsed.data, null, 1) }),
+      h('div', { class: 'small', attrs: { dir: 'auto' }, text: 'Auto-reply SMS: ' + d.reply }));
   }
 
   // ---- Simulation

@@ -153,6 +153,8 @@
   'map.closure': 'Straße gesperrt', 'map.you': 'Sie', 'map.shelter': 'Unterkunft', 'map.alertarea': 'Warngebiet', 'map.legend': 'Legende',
   'common.close': 'Schließen', 'common.cancel': 'Abbrechen', 'common.done': 'Fertig', 'common.retry': 'Erneut versuchen',
   'about.title': 'Info und Datenquellen',
+  'about.text': 'Offizielle Warnungen in Ihrer Sprache (feste, vorab übersetzte Anweisungen), Gefahrengebiete, Notunterkünfte und SOS, das von Internet auf SMS und 112 umschaltet. Karte © OpenStreetMap-Mitwirkende. Wetter: Open-Meteo. Regenstufen: IMD-Skala.',
+  'about.officials': 'Leitstelle (für Behörden) →',
   'install': 'App installieren',
   'relay.title': 'Helfen Sie, eine Notfallnachricht weiterzuleiten',
   'relay.desc': 'Jemand ohne Internet bittet Sie, diese Nachricht weiterzugeben. Sie wird an die Leitstelle gesendet.',

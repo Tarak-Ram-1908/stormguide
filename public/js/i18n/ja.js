@@ -153,6 +153,8 @@
   'map.closure': '通行止め', 'map.you': '現在地', 'map.shelter': '避難所', 'map.alertarea': '警報区域', 'map.legend': '凡例',
   'common.close': '閉じる', 'common.cancel': 'キャンセル', 'common.done': '完了', 'common.retry': '再試行',
   'about.title': 'このアプリとデータの出典',
+  'about.text': 'あなたの言語で公式警報（事前翻訳済みの固定の指示）、危険区域、避難所、そしてインターネット→SMS→112と切り替わるSOS。地図 © OpenStreetMap 寄稿者。天気：Open-Meteo。雨量：IMD基準。',
+  'about.officials': '指令センター（当局向け）→',
   'install': 'アプリをインストール',
   'relay.title': '緊急メッセージの中継にご協力ください',
   'relay.desc': 'インターネットが使えない人が、このメッセージの転送を頼んでいます。指令センターに送信されます。',

@@ -153,6 +153,8 @@
   'map.closure': '道路封闭', 'map.you': '您', 'map.shelter': '避难所', 'map.alertarea': '预警区域', 'map.legend': '图例',
   'common.close': '关闭', 'common.cancel': '取消', 'common.done': '完成', 'common.retry': '重试',
   'about.title': '关于与数据来源',
+  'about.text': '以您的语言显示官方预警（预先翻译的固定指示）、危险区域、避难所，以及从互联网到短信再到112的求救。地图 © OpenStreetMap 贡献者。天气：Open-Meteo。降雨等级：印度气象局标准。',
+  'about.officials': '指挥中心（官员使用）→',
   'install': '安装应用',
   'relay.title': '帮忙转发一条紧急消息',
   'relay.desc': '一位没有网络的人请您转发这条消息，它将被发送到指挥中心。',
