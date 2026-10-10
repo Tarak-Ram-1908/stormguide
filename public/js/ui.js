@@ -52,6 +52,7 @@
     UI.mount(box, content);
     box.className = 'modal-box ' + (opts.cls || '');
     m.hidden = false;
+    UI._sticky = !!opts.sticky;
     m.onclick = function (e) { if (e.target === m && !opts.sticky) UI.closeModal(); };
     var f = box.querySelector('button, a, input, select, textarea');
     if (f) f.focus();
@@ -60,11 +61,12 @@
     var m = document.getElementById('modal');
     if (!m || m.hidden) return;
     m.hidden = true;
+    UI._sticky = false;
     UI.clear(document.getElementById('modal-box'));
     if (UI.onModalClose) { var f = UI.onModalClose; UI.onModalClose = null; f(); }
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   };
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') UI.closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !UI._sticky) UI.closeModal(); });
 
   /** QR code as an <svg> element (generated locally; works offline). */
   UI.qr = function (text) {

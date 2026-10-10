@@ -68,8 +68,8 @@
       token = d.token; me = d.email;
       try { sessionStorage.setItem('sg.token', token); sessionStorage.setItem('sg.me', me); } catch (x) { /* */ }
       document.getElementById('pin').value = '';
-      start();
-      if (d.mustChangePin) setTimeout(function () { changePin(true); }, 400);
+      if (d.mustChangePin) changePin(true); // must set a real password before using the console
+      else start();
     }).catch(function (err) { document.getElementById('login-error').textContent = err.message; });
   });
 
@@ -81,29 +81,34 @@
       reason: document.getElementById('rq-reason').value, pin: document.getElementById('rq-pin').value
     }).then(function () {
       out.className = 'small ok-text';
-      out.textContent = '✅ Request sent. The hosts have been notified. Log in with this email and PIN after approval.';
+      out.textContent = '✅ Request sent. The hosts have been notified. Log in with this email and password after approval.';
       e.target.reset();
     }).catch(function (err) { out.className = 'small warn-text'; out.textContent = '❌ ' + err.message; });
   });
 
   function changePin(first) {
-    var cur = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'Current PIN', autocomplete: 'current-password' } });
-    var n1 = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'New PIN (min 4 characters)', autocomplete: 'new-password' } });
-    var n2 = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'Repeat new PIN', autocomplete: 'new-password' } });
+    var cur = h('input', { class: 'input', type: 'password', attrs: { placeholder: first ? 'Initial password' : 'Current password', autocomplete: 'current-password' } });
+    var n1 = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'New password', autocomplete: 'new-password', minlength: 6, maxlength: 64 } });
+    var n2 = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'Repeat new password', autocomplete: 'new-password' } });
     var err = h('div', { class: 'warn-text' });
+    function valid(p) { return p.length >= 6 && /[A-Za-z]/.test(p) && /\d/.test(p); }
     UI.modal([
-      h('h2', { text: '🔑 Change your PIN' }),
-      first ? h('p', { class: 'warn-text', text: 'You are still using the initial PIN. Please set your own PIN now.' }) : null,
-      h('p', { class: 'muted small', text: 'Logged in as ' + me }),
+      h('h2', { text: first ? '🔑 Set your own password' : '🔑 Change your password' }),
+      first ? h('p', { class: 'small', text: 'You signed in with the initial password. Choose your own to continue.' }) : null,
+      h('p', { class: 'muted small', text: 'Signed in as ' + me + '. At least 6 characters, with letters and numbers.' }),
       cur, n1, n2, err,
       h('div', { class: 'btn-row' },
-        h('button', { class: 'btn primary', text: 'Save PIN', onclick: function () {
-          if (n1.value !== n2.value) { err.textContent = 'The new PINs do not match'; return; }
-          api('POST', '/api/admin/pin', { currentPin: cur.value, newPin: n1.value }).then(function () { UI.closeModal(); UI.toast('✅ PIN changed', 'ok'); })
-            .catch(function (x) { err.textContent = x.message; });
+        h('button', { class: 'btn primary', text: 'Save password', onclick: function () {
+          if (!valid(n1.value)) { err.textContent = 'Use at least 6 characters, with both letters and numbers.'; return; }
+          if (n1.value !== n2.value) { err.textContent = 'The new passwords do not match.'; return; }
+          api('POST', '/api/admin/pin', { currentPin: cur.value, newPin: n1.value }).then(function () {
+            UI.closeModal(); UI.toast('✅ Password saved', 'ok');
+            if (first) start();
+          }).catch(function (x) { err.textContent = x.message; });
         } }),
-        h('button', { class: 'btn ghost', text: first ? 'Later' : 'Cancel', onclick: UI.closeModal }))
-    ]);
+        first ? h('button', { class: 'btn ghost', text: 'Log out', onclick: function () { UI.closeModal(); logout(); } })
+          : h('button', { class: 'btn ghost', text: 'Cancel', onclick: UI.closeModal }))
+    ], { sticky: first });
   }
   document.getElementById('change-pin').addEventListener('click', function () { changePin(false); });
 
@@ -541,9 +546,7 @@
             return h('div', { class: 'list-row' },
               h('div', null, h('strong', { text: x.email + (x.email === d.me ? ' (you)' : '') }), h('div', { class: 'muted small', text: x.founder ? 'Founding host' : 'Added by ' + x.addedBy + ' · ' + age(x.addedAt) })),
               !x.founder ? h('button', { class: 'btn small', text: 'Remove', onclick: function () { if (window.confirm('Remove ' + x.email + ' as host?')) act(api('DELETE', '/api/admin/hosts/' + encodeURIComponent(x.email)), 'Host removed').then(pHosts); } }) : null);
-          }),
-          h('div', { class: 'btn-row' }, h('button', { class: 'btn', text: '🔑 Change my PIN', onclick: function () { changePin(false); } }))),
-        h('p', { class: 'fineprint', text: 'New requests make a sound and a pop-up here. If the server has an email key configured (RESEND_API_KEY), every host also gets an email.' }));
+          })));
     }).catch(function (e) { UI.toast('❌ ' + e.message, 'danger'); });
     return null;
   }

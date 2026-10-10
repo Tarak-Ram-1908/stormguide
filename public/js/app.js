@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   var h = UI.h, t = function (k, v) { return SG.t(k, v); };
-  var currentView = 'status';
+  var currentView = null;
   var REPORT_ICON = { flooding: '🌊', road_blocked: '🚧', power_line: '⚡', trapped: '🆘', injury: '🩹', building_damage: '🏚️', other: '⚠️' };
   var SIT_ICON = { trapped: '🧱', injured: '🩹', water_rising: '🌊', medical: '💊', other: '❗' };
   var MODE_ICON = { metro: '🚇', train: '🚆', bus: '🚌', airport: '✈️' };
@@ -33,7 +33,9 @@
   }
 
   // ------------------------------------------------------------ navigation
-  function show(view) {
+  var VIEWS = ['status', 'map', 'sos', 'report', 'more'];
+  function show(view, fromHistory) {
+    var changed = view !== currentView;
     currentView = view;
     Array.prototype.forEach.call(document.querySelectorAll('.view'), function (v) { v.classList.toggle('active', v.id === 'view-' + view); });
     Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) {
@@ -43,7 +45,15 @@
     if (view === 'map') { SGMap.init(document.getElementById('map')); SGMap.invalidate(); renderMapTools(); }
     if (view === 'report') renderReports();
     window.scrollTo(0, 0);
-    try { history.replaceState(null, '', '#' + view); } catch (e) { /* file:// */ }
+    if (view !== 'map' && SGMap.cancelPick) SGMap.cancelPick();
+    // Each tab is a history step, so the phone's back gesture goes to the previous tab instead of leaving the site.
+    if (!fromHistory && changed) pushView(view);
+  }
+  function pushView(view) {
+    // Wait until our own history.back() (closing a pop-up) has finished, then add the new tab.
+    if (ignoreNextPop) { setTimeout(function () { pushView(view); }, 30); return; }
+    if (view !== currentView) return;
+    try { history.pushState({ view: view }, '', '#' + view); } catch (e) { /* file:// */ }
   }
 
   // ------------------------------------------------------------ top bars
@@ -98,10 +108,13 @@
   }
 
   function pickOnMap() {
-    show('map');
-    UI.toast(t('loc.tapmap'), '', 5000);
-    SGMap.pick(function (pt) { SG.setManual(pt); });
+    if (!document.getElementById('modal').hidden) UI.closeModal();
+    setTimeout(function () {
+      show('map');
+      setTimeout(function () { SGMap.pick(function (pt) { SG.setManual(pt); UI.toast('📍 ' + t('loc.manual'), 'ok'); }); }, 350);
+    }, 50);
   }
+  SG.onLocateRequest = function () { useGps(); };
 
   function renderRisk() {
     var box = document.getElementById('risk');
@@ -124,6 +137,9 @@
     if (level === 'unknown') children.push(locationButtons());
     else {
       if (r.distFromRegion > 15) children.push(h('div', { class: 'risk-sub warn', text: t('loc.far', { dist: SG.fmtDist(r.distFromRegion) }) }), demoMenu());
+      if (SG.prefs.location && SG.prefs.location.mode !== 'gps') {
+        children.push(h('div', { class: 'btn-row' }, h('button', { class: 'btn small primary', text: '📡 ' + t('loc.gps'), onclick: function () { useGps(); UI.toast('📡 ' + t('loc.gps')); } })));
+      }
       children.push(h('button', { class: 'link', text: t('loc.set') + ' / ' + t('loc.demo'), onclick: function () { UI.modal([h('h3', { text: t('loc.set') }), locationButtons(), demoMenu(), h('button', { class: 'btn ghost', text: t('common.close'), onclick: UI.closeModal })]); } }));
     }
     UI.mount(box, children);
@@ -356,9 +372,9 @@
   function renderMapTools() {
     UI.mount('map-tools',
       h('button', { class: 'btn small', text: '📡 ' + t('loc.gps'), onclick: function () { useGps(); } }),
-      h('button', { class: 'btn small', text: '👆 ' + t('loc.set'), onclick: function () { UI.toast(t('loc.tapmap')); SGMap.pick(function (pt) { SG.setManual(pt); }); } }),
+      h('button', { class: 'btn small', text: '👆 ' + t('loc.set'), onclick: pickOnMap }),
       h('button', { class: 'btn small', text: '🎯 ' + t('loc.demo'), onclick: function () { UI.modal([h('h3', { text: t('loc.demo') }), demoMenu(), h('button', { class: 'btn ghost', text: t('common.close'), onclick: UI.closeModal })]); } }),
-      h('button', { class: 'btn small', text: '📍', attrs: { 'aria-label': t('map.you') }, onclick: function () { SGMap.focus(SG.point(), 15); } }));
+);
     UI.mount('legend',
       h('span', { class: 'lg flooded', text: t('zone.flooded') }), h('span', { class: 'lg unsafe', text: t('zone.unsafe') }),
       h('span', { class: 'lg safe', text: t('zone.safe') }), h('span', { class: 'lg alertarea', text: t('map.alertarea') }),
@@ -838,8 +854,32 @@
   SG.loadCachedState();
   applyLang();
   renderAll();
+  // Open on SOS (most urgent), unless the URL names a tab (e.g. after a reload).
   var hashView = (location.hash || '').slice(1);
-  if (['status', 'map', 'sos', 'report', 'more'].indexOf(hashView) >= 0) show(hashView);
+  var startView = VIEWS.indexOf(hashView) >= 0 ? hashView : 'sos';
+  show(startView, true);
+  try { history.replaceState({ view: startView }, '', '#' + startView); } catch (e) { /* ignore */ }
+
+  // Back gesture: close an open pop-up first, otherwise go to the previous tab.
+  var modalInHistory = false, ignoreNextPop = false;
+  var openModalBase = UI.modal, closeModalBase = UI.closeModal;
+  UI.modal = function (content, opts) {
+    openModalBase(content, opts);
+    if (!modalInHistory) { try { history.pushState({ view: currentView, modal: true }, '', location.hash); modalInHistory = true; } catch (e) { /* ignore */ } }
+  };
+  UI.closeModal = function (fromHistory) {
+    closeModalBase();
+    if (modalInHistory) { modalInHistory = false; if (fromHistory !== true) { ignoreNextPop = true; try { history.back(); } catch (e) { ignoreNextPop = false; } } }
+  };
+  window.addEventListener('popstate', function (e) {
+    if (ignoreNextPop) { ignoreNextPop = false; return; } // our own history.back() after closing a pop-up
+    if (modalInHistory) {
+      if (UI._sticky) { try { history.pushState({ view: currentView, modal: true }, '', location.hash); } catch (x) { /* ignore */ } return; }
+      UI.closeModal(true); return;
+    }
+    var v = (e.state && e.state.view) || (location.hash || '').slice(1) || 'sos';
+    if (VIEWS.indexOf(v) >= 0 && v !== currentView) show(v, true);
+  });
   if (!SG.prefs.lang) langPicker(true);
   else if (SG.prefs.location && SG.prefs.location.mode === 'gps') useGps();
   SG.refresh().then(function () { renderWeather(); });

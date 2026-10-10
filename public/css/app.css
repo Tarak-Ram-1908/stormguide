@@ -366,3 +366,10 @@ details summary { cursor: pointer; color: var(--primary); font-weight: 650; font
 .btn.speaking { background: var(--coral); color: #fff; border-color: transparent; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* map: locate button + confirm-location bar */
+.sg-locate a { font-size: 17px; line-height: 30px; text-align: center; text-decoration: none; background: #fff; }
+.pick-bar { position: absolute; left: 10px; right: 10px; bottom: 26px; z-index: 900; background: var(--card); color: var(--ink); border-radius: var(--r-md); box-shadow: var(--shadow-2); padding: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border: 2px solid var(--focus); }
+.pick-hint { font-weight: 650; font-size: var(--fs-sm); }
+.pick-actions { display: flex; gap: 8px; }
+.sg-icon.pick { background: transparent; border: 0; box-shadow: none; font-size: 30px; align-items: flex-end; }

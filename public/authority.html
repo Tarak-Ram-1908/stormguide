@@ -16,7 +16,7 @@
     <div class="brand"><img src="/icons/icon-192.png" alt="" width="28" height="28"><span>StormGuide · Control room</span></div>
     <div class="net-pill" id="net-pill"><span class="dot"></span><span id="net-text">…</span></div>
     <a class="lang-btn" href="/" target="_blank" rel="noopener">Traveller app ↗</a>
-    <button class="lang-btn" id="change-pin" type="button" hidden>Change PIN</button>
+    <button class="lang-btn" id="change-pin" type="button" hidden>Change password</button>
     <button class="lang-btn" id="logout" type="button" hidden>Log out</button>
   </header>
 
@@ -25,7 +25,7 @@
     <p class="muted small">Only approved hosts can change alerts, zones, shelters and other data.</p>
     <form id="login-form">
       <input class="input" id="email" type="email" autocomplete="username" placeholder="Host email" required maxlength="254">
-      <input class="input" id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" required maxlength="32">
+      <input class="input" id="pin" type="password" autocomplete="current-password" placeholder="Password" required maxlength="64">
       <button class="btn primary block" type="submit">Log in</button>
     </form>
     <div id="login-error" class="warn-text"></div>
@@ -36,7 +36,7 @@
         <input class="input" id="rq-name" type="text" placeholder="Your name" required maxlength="80">
         <input class="input" id="rq-email" type="email" placeholder="Your email" required maxlength="254">
         <input class="input" id="rq-reason" type="text" placeholder="Organisation / reason (optional)" maxlength="300">
-        <input class="input" id="rq-pin" type="password" inputmode="numeric" placeholder="Choose a PIN (min 4 characters)" required minlength="4" maxlength="32">
+        <input class="input" id="rq-pin" type="password" autocomplete="new-password" placeholder="Choose a password (6+ characters, letters and numbers)" required minlength="6" maxlength="64">
         <button class="btn block" type="submit">Send request</button>
       </form>
       <div id="request-result" class="small"></div>

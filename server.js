@@ -226,10 +226,11 @@ function normEmail(v) {
   if (!EMAIL_RE.test(e)) V.fail('Enter a valid email address');
   return e;
 }
-function checkPin(v, name = 'PIN') {
-  const pin = V.str(v, name, { min: 4, max: 32 });
-  if (/^(\d)\1+$/.test(pin)) V.fail('Choose a PIN that is not all the same digit');
-  return pin;
+/** Host password rule: at least 6 characters, with at least one letter and one number. */
+function checkPin(v, name = 'Password') {
+  const pw = V.str(v, name, { min: 6, max: 64 });
+  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) V.fail(name + ' must contain both letters and numbers');
+  return pw;
 }
 function hashPin(pin, salt) { return crypto.scryptSync(String(pin), salt, 32).toString('hex'); }
 function newPinRecord(pin) { const salt = crypto.randomBytes(16).toString('hex'); return { salt, pinHash: hashPin(pin, salt) }; }
@@ -583,7 +584,7 @@ route('POST', '/api/auth', async (req, res) => {
   const email = normEmail(body.email);
   rateLimit({ headers: {}, socket: { remoteAddress: 'email:' + email } }, 'auth-email', 8, 8); // per-account brute-force limit
   const rec = hosts()[email];
-  if (!pinOk(rec, body.pin)) throw new HttpError(401, 'Wrong email or PIN');
+  if (!pinOk(rec, body.pin)) throw new HttpError(401, 'Wrong email or password');
   sendJson(req, res, 200, { ok: true, token: issueToken(email), email, founder: !!rec.founder, mustChangePin: !rec.pinChanged, expiresInSec: TOKEN_TTL / 1000 });
 });
 
@@ -618,6 +619,8 @@ function admin(method, pattern, handler) {
     const email = requireAuth(req, url);
     rateLimit(req, 'admin', 240, 60);
     req.host = email;
+    // A host still on the initial password must set their own before doing anything else.
+    if (!hosts()[email].pinChanged && pattern !== '/api/admin/pin') throw new HttpError(403, 'Set your own password first');
     return handler(req, res, p, url);
   });
 }
@@ -636,9 +639,9 @@ admin('GET', '/api/admin/hosts', (req, res) => sendJson(req, res, 200, Object.as
 admin('POST', '/api/admin/pin', async (req, res) => {
   const b = V.obj(await readBody(req));
   const rec = hosts()[req.host];
-  if (!pinOk(rec, b.currentPin)) throw new HttpError(401, 'Current PIN is wrong');
-  const pin = checkPin(b.newPin, 'new PIN');
-  if (pin === INITIAL_PIN) V.fail('Choose a PIN different from the initial PIN');
+  if (!pinOk(rec, b.currentPin)) throw new HttpError(401, 'Current password is wrong');
+  const pin = checkPin(b.newPin, 'New password');
+  if (pin === INITIAL_PIN) V.fail('Choose a password different from the initial one');
   store.mutate((pub, priv) => { Object.assign(priv.hosts[req.host], newPinRecord(pin), { pinChanged: true }); }, { privateOnly: true });
   sendJson(req, res, 200, { ok: true });
 });

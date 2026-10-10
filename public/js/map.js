@@ -37,12 +37,25 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     ['alerts', 'zones', 'closures', 'reports', 'shelters'].forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
-    map.on('click', function (e) {
-      if (!picking) return;
-      picking = false;
-      container.classList.remove('picking');
-      if (onPick) onPick([e.latlng.lat, e.latlng.lng]);
+    // "My location" button on the map itself (always visible, no scrolling).
+    var Locate = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function () {
+        var wrap = L.DomUtil.create('div', 'leaflet-bar sg-locate');
+        var a = L.DomUtil.create('a', '', wrap);
+        a.href = '#'; a.setAttribute('role', 'button'); a.setAttribute('aria-label', SG.t('map.you')); a.title = SG.t('map.you');
+        a.textContent = '📍';
+        L.DomEvent.on(a, 'click', function (e) {
+          L.DomEvent.stop(e);
+          var p = SG.point();
+          if (p) M.focus(p, 15);
+          else if (SG.onLocateRequest) SG.onLocateRequest();
+        });
+        L.DomEvent.disableClickPropagation(wrap);
+        return wrap;
+      }
     });
+    map.addControl(new Locate());
     M.render();
     return map;
   };
@@ -54,20 +67,46 @@
     setTimeout(function () { map.invalidateSize({ pan: false }); }, 300);
   };
 
-  var removeCatcher = null;
+  var removeCatcher = null, pickMarker = null, pickBar = null;
+  function endPick() {
+    picking = false;
+    if (removeCatcher) { removeCatcher(); removeCatcher = null; }
+    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+    if (pickBar && pickBar.parentNode) pickBar.parentNode.removeChild(pickBar);
+    pickBar = null;
+    map.getContainer().classList.remove('picking');
+  }
+  /**
+   * Manual location: tap to drop a pin (tap again to move it), then press
+   * "Confirm this location". Nothing changes until the person confirms.
+   */
   M.pick = function (cb) {
     if (!map) return;
+    endPick();
     picking = true; onPick = cb;
     map.closePopup();
     map.getContainer().classList.add('picking');
-    if (removeCatcher) removeCatcher();
+    var chosen = null;
+    pickBar = el('div', 'pick-bar');
+    var hint = el('div', 'pick-hint', SG.t('loc.tapmap'));
+    var ok = el('button', 'btn primary small', '✓ ' + SG.t('loc.confirm'));
+    var cancel = el('button', 'btn small', SG.t('common.cancel'));
+    ok.disabled = true;
+    ok.addEventListener('click', function (e) { e.stopPropagation(); if (!chosen) return; var c = chosen; endPick(); if (onPick) onPick(c); });
+    cancel.addEventListener('click', function (e) { e.stopPropagation(); endPick(); });
+    var row = el('div', 'pick-actions'); row.appendChild(ok); row.appendChild(cancel);
+    pickBar.appendChild(hint); pickBar.appendChild(row);
+    L.DomEvent.disableClickPropagation(pickBar);
+    map.getContainer().appendChild(pickBar);
     removeCatcher = UI.clickCatcher(map, function (ll) {
-      removeCatcher(); removeCatcher = null;
-      picking = false;
-      map.getContainer().classList.remove('picking');
-      if (onPick) onPick([ll.lat, ll.lng]);
+      chosen = [ll.lat, ll.lng];
+      if (!pickMarker) pickMarker = L.marker(ll, { icon: divIcon('<span>📍</span>', 'pick', 34), zIndexOffset: 2000, interactive: false }).addTo(map);
+      else pickMarker.setLatLng(ll);
+      hint.textContent = chosen[0].toFixed(5) + ', ' + chosen[1].toFixed(5);
+      ok.disabled = false;
     });
   };
+  M.cancelPick = function () { if (map && picking) endPick(); };
 
   M.focus = function (point, zoom) { if (map && point) map.setView(point, zoom || Math.max(map.getZoom(), 15)); };
 

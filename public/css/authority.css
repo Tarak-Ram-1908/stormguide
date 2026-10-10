@@ -51,4 +51,13 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: .
 .me { font-size: .8rem; opacity: .85; }
 .sos-item { position: relative; }
 body.authority .topbar .lang-btn { white-space: nowrap; }
-@media (max-width: 640px) { body.authority .topbar { flex-wrap: wrap; } }
+@media (max-width: 640px) {
+  body.authority .topbar { gap: 6px; padding-inline: 10px; overflow-x: auto; scrollbar-width: none; }
+  body.authority .topbar::-webkit-scrollbar { display: none; }
+  body.authority .topbar > * { flex: 0 0 auto; }
+  body.authority .brand { flex: 0 0 auto; }
+  .stats .stat { min-width: 0; flex: 1 1 40%; }
+  body.authority .brand span { display: none; }
+  body.authority .topbar .lang-btn { padding: 5px 8px; font-size: .8rem; min-height: 34px; }
+  body.authority .net-pill { padding: 4px 8px; font-size: .78rem; }
+}
