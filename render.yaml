@@ -1,0 +1,19 @@
+# One-click deploy on Render (https://render.com): New + > Blueprint > pick this repo.
+services:
+  - type: web
+    name: stormguide
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: AUTHORITY_PIN
+        sync: false          # you type it in the Render dashboard; keep it secret
+      - key: SESSION_SECRET
+        generateValue: true  # signs control-room login tokens
+      - key: SMS_NUMBER
+        sync: false          # optional: phone number that receives coded SOS SMS

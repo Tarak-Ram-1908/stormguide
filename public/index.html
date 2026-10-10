@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>StormGuide — crisis guide for travellers</title>
+  <meta name="description" content="Offline-first crisis guide for travellers: official alerts in your language, flooded areas, shelters and SOS that works without internet.">
+  <meta name="theme-color" content="#0c264a">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="/icons/icon-192.png" alt="" width="28" height="28"><span data-i18n="app.name">StormGuide</span></div>
+    <div class="net-pill" id="net-pill" role="status" aria-live="polite"><span class="dot"></span><span id="net-text">…</span></div>
+    <button class="lang-btn" id="lang-btn" type="button" aria-label="Language">🌐 <span id="lang-code">EN</span></button>
+  </header>
+  <div class="databar" id="databar" role="status" aria-live="polite"></div>
+
+  <main id="main">
+    <section class="view active" id="view-status" aria-labelledby="tab-status">
+      <div id="risk" class="card risk"></div>
+      <div id="shelter-card"></div>
+      <div id="tips"></div>
+      <h2 class="section-title" data-i18n="alerts.title">Official alerts</h2>
+      <div id="alerts"></div>
+      <p class="fineprint" data-i18n="alerts.translated"></p>
+      <h2 class="section-title" data-i18n="tr.title">Transport</h2>
+      <div id="transport" class="card list"></div>
+      <h2 class="section-title" data-i18n="rumor.title">Rumor check</h2>
+      <div id="rumors"></div>
+      <h2 class="section-title" data-i18n="wx.title">Weather (automatic)</h2>
+      <div id="weather" class="card"></div>
+      <div id="demo-note" class="fineprint"></div>
+    </section>
+
+    <section class="view" id="view-map" aria-labelledby="tab-map">
+      <div class="map-tools" id="map-tools"></div>
+      <div id="map" class="map" role="application" aria-label="Map"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="view" id="view-sos" aria-labelledby="tab-sos">
+      <div id="sos"></div>
+      <h2 class="section-title" data-i18n="hot.title">Emergency numbers</h2>
+      <div id="hotlines" class="card list"></div>
+    </section>
+
+    <section class="view" id="view-report" aria-labelledby="tab-report">
+      <div id="report-form"></div>
+      <h2 class="section-title" data-i18n="rep.mine">My reports</h2>
+      <div id="my-reports"></div>
+      <h2 class="section-title" data-i18n="rep.nearby">Reports near you</h2>
+      <div id="nearby-reports"></div>
+    </section>
+
+    <section class="view" id="view-more" aria-labelledby="tab-more">
+      <div id="more"></div>
+    </section>
+  </main>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button role="tab" id="tab-status" data-view="status" class="active" aria-selected="true"><span class="ico">🛡️</span><span data-i18n="tab.status">Status</span></button>
+    <button role="tab" id="tab-map" data-view="map" aria-selected="false"><span class="ico">🗺️</span><span data-i18n="tab.map">Map</span></button>
+    <button role="tab" id="tab-sos" data-view="sos" class="sos-tab" aria-selected="false"><span class="ico">🆘</span><span data-i18n="tab.sos">SOS</span></button>
+    <button role="tab" id="tab-report" data-view="report" aria-selected="false"><span class="ico">📣</span><span data-i18n="tab.report">Report</span></button>
+    <button role="tab" id="tab-more" data-view="more" aria-selected="false"><span class="ico">☰</span><span data-i18n="tab.more">More</span></button>
+  </nav>
+
+  <div id="modal" class="modal" hidden role="dialog" aria-modal="true"><div class="modal-box" id="modal-box"></div></div>
+  <div id="toast" class="toast" role="alert" hidden></div>
+
+  <noscript><div class="noscript">StormGuide needs JavaScript. Emergency: call 112.</div></noscript>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/vendor/qrcode.js"></script>
+  <script src="/js/geo.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/i18n/en.js"></script>
+  <script src="/js/i18n/ta.js"></script>
+  <script src="/js/i18n/hi.js"></script>
+  <script src="/js/i18n/fr.js"></script>
+  <script src="/js/i18n/de.js"></script>
+  <script src="/js/i18n/es.js"></script>
+  <script src="/js/i18n/zh.js"></script>
+  <script src="/js/i18n/ja.js"></script>
+  <script src="/js/i18n/ar.js"></script>
+  <script src="/js/smscode.js"></script>
+  <script src="/js/db.js"></script>
+  <script src="/js/core.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

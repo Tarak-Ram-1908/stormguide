@@ -1,0 +1,8 @@
+node_modules/
+data/db.json
+data/*.tmp
+.DS_Store
+*.log
+*.pdf
+
+*.msi
