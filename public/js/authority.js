@@ -8,6 +8,8 @@
 (function () {
   'use strict';
   var h = UI.h, T = function (k, v) { return I18N.t('en', k, v); };
+  var sunBtn = document.getElementById('sun-btn');
+  if (sunBtn && window.SGTheme) sunBtn.addEventListener('click', function () { UI.toast(SGTheme.toggle() === 'sun' ? '☀️ ' + T('sun.on') : T('sun.off')); });
   var VOC = I18N.VOCAB;
   var token = null, me = null;
   try { token = sessionStorage.getItem('sg.token'); me = sessionStorage.getItem('sg.me'); } catch (e) { token = null; }

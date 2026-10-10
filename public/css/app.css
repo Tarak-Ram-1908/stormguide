@@ -57,7 +57,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1924; --card: #152433; --ink: #e7eef5; --muted: #9db0c2; --line: #233648; --line-strong: #2f465b;
+    --bg: #0e1924; --card: #152433; --ink: #f2f6fa; --muted: #c2d0dd; --line: #233648; --line-strong: #2f465b;
     --primary: #3fa7c9; --ocean-50: #133446; --turq-50: #0f3330; --ok: #4fd1bd; --warn: #f0b45c; --amber-50: #3a2b12;
     --danger: #ff7b6e; --red-50: #3c1c19; --coral-50: #3e211c;
     --shadow-1: 0 1px 2px rgba(0, 0, 0, .3); --shadow-2: 0 6px 18px -8px rgba(0, 0, 0, .6);
@@ -101,6 +101,7 @@ button, input, select, textarea { font: inherit; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79,216,196,.55); } 70% { box-shadow: 0 0 0 7px rgba(79,216,196,0); } 100% { box-shadow: 0 0 0 0 rgba(79,216,196,0); } }
 .lang-btn { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.14); border-radius: var(--r-sm); padding: 6px 11px; cursor: pointer; min-height: 38px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: background .15s var(--ease); }
 .lang-btn:hover { background: rgba(255,255,255,.18); }
+.sun-btn { padding: 6px 9px; font-size: 1.05rem; line-height: 1; }
 .databar { position: sticky; top: 58px; z-index: 999; padding: 7px 16px; font-size: var(--fs-sm); font-weight: 500; background: var(--ocean-50); color: var(--ink); border-bottom: 1px solid var(--line); }
 .databar.warn { background: var(--warn-bg); color: var(--warn); }
 .databar.bad { background: var(--danger-bg); color: var(--danger); font-weight: 650; }
@@ -402,3 +403,112 @@ details summary { cursor: pointer; color: var(--primary); font-weight: 650; font
 .ai-chips { margin: 6px 0; flex-wrap: wrap; }
 .ai-msg .btn-row { margin-top: 8px; }
 .ai-more summary { cursor: pointer; color: var(--primary); font-weight: 600; margin-top: 6px; }
+
+/* ============================================================ sunlight mode
+ * Worst case: direct sun on the screen, brightness turned down to save battery.
+ * Glare adds the same grey to every pixel, so only the biggest luminance gap
+ * survives: pure black text on pure white, bold strokes, bigger type, thick
+ * borders instead of soft shadows or pale tints, and meaning carried by shape
+ * and words, never by a light colour alone. Ignores the phone's dark mode.
+ */
+html[data-theme="sun"] {
+  --bg: #ffffff; --card: #ffffff; --ink: #000000; --muted: #000000;
+  --line: #000000; --line-strong: #000000;
+  --primary: #0039a6; --primary-ink: #ffffff; --ocean-600: #002a7a;
+  --ocean-50: #ffffff; --turq-50: #ffffff; --coral-50: #ffffff; --amber-50: #ffe500; --red-50: #ffffff;
+  --ok: #005a2b; --ok-bg: #ffffff; --warn: #000000; --warn-bg: #ffe500; --danger: #a30000; --danger-bg: #ffffff;
+  --red: #b00000; --coral: #b00000; --turq: #005a2b;
+  --shadow-1: none; --shadow-2: none; --shadow: none;
+  --fs-xs: .9rem; --fs-sm: 1rem; --fs-md: 1.08rem; --fs-lg: 1.3rem; --fs-xl: 1.55rem;
+  color-scheme: light;
+}
+html[data-theme="sun"] body { background: #fff; color: #000; font-weight: 600; -webkit-font-smoothing: auto; }
+html[data-theme="sun"] h2, html[data-theme="sun"] h3, html[data-theme="sun"] strong, html[data-theme="sun"] b { font-weight: 900; }
+html[data-theme="sun"] a { color: #0039a6; text-decoration: underline; text-decoration-thickness: 2px; }
+html[data-theme="sun"] .muted, html[data-theme="sun"] .fineprint, html[data-theme="sun"] .legend,
+html[data-theme="sun"] .route-labels { color: #000 !important; opacity: 1; }
+html[data-theme="sun"] :focus-visible { outline: 4px solid #000; }
+
+/* header + bottom tabs */
+html[data-theme="sun"] .topbar { background: #fff; background-image: none; color: #000; border-bottom: 3px solid #000; }
+html[data-theme="sun"] .net-pill, html[data-theme="sun"] .lang-btn { background: #fff; color: #000; border: 2px solid #000; font-weight: 800; }
+html[data-theme="sun"] .net-pill.live .dot { background: #005a2b; animation: none; }
+html[data-theme="sun"] .net-pill.online .dot { background: #000; }
+html[data-theme="sun"] .net-pill.offline { background: #b00000; color: #fff; border-color: #b00000; }
+html[data-theme="sun"] .sun-btn[aria-pressed="true"] { background: #000; color: #fff; }
+html[data-theme="sun"] .databar { background: #fff; color: #000; border-bottom: 2px solid #000; font-weight: 800; }
+html[data-theme="sun"] .databar.warn { background: #ffe500; color: #000; }
+html[data-theme="sun"] .databar.bad { background: #b00000; color: #fff; }
+html[data-theme="sun"] .tabs { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; border-top: 3px solid #000; box-shadow: none; }
+html[data-theme="sun"] .tabs button { color: #000; font-weight: 800; }
+html[data-theme="sun"] .tabs button.active { background: #000; color: #fff; border-radius: 12px; }
+html[data-theme="sun"] .tabs .sos-tab { color: #a30000; }
+html[data-theme="sun"] .tabs .sos-tab .ico { background: none; }
+html[data-theme="sun"] .tabs .sos-tab.active { background: #b00000; color: #fff; }
+
+/* surfaces */
+html[data-theme="sun"] .card, html[data-theme="sun"] .modal-box, html[data-theme="sun"] .map, html[data-theme="sun"] .ai-item,
+html[data-theme="sun"] .ai-call, html[data-theme="sun"] .lang-option { border: 2px solid #000; box-shadow: none; }
+html[data-theme="sun"] .modal { background: rgba(0, 0, 0, .65); }
+html[data-theme="sun"] .modal-box { border-bottom: 0; }
+html[data-theme="sun"] .tips, html[data-theme="sun"] .ai-entry { background: #fff; border: 2px solid #000; }
+html[data-theme="sun"] .risk { border: 3px solid #000; }
+html[data-theme="sun"] .risk::before, html[data-theme="sun"] .alert::before { width: 10px; background: #000; }
+html[data-theme="sun"] .risk.inside { background: #fff; border: 4px solid #b00000; }
+html[data-theme="sun"] .risk.inside::before, html[data-theme="sun"] .alert.sev-Severe::before, html[data-theme="sun"] .alert.sev-Extreme::before { background: #b00000; }
+html[data-theme="sun"] .risk.inside .risk-title { color: #a30000; }
+html[data-theme="sun"] .risk.near, html[data-theme="sun"] .risk.alert { background: #ffe500; }
+html[data-theme="sun"] .risk.near::before, html[data-theme="sun"] .risk.alert::before, html[data-theme="sun"] .alert.sev-Moderate::before, html[data-theme="sun"] .alert.sev-Minor::before { background: #000; }
+html[data-theme="sun"] .risk.clear { background: #fff; border-color: #005a2b; }
+html[data-theme="sun"] .risk.clear::before { background: #005a2b; }
+html[data-theme="sun"] .risk-sub.ok, html[data-theme="sun"] .ai-line.ok { color: #005a2b; }
+html[data-theme="sun"] .risk-sub.warn, html[data-theme="sun"] .warn-text, html[data-theme="sun"] .ai-line.warn { color: #000; font-weight: 800; }
+html[data-theme="sun"] .warn-text::before { content: '⚠ '; }
+html[data-theme="sun"] .alert.expired, html[data-theme="sun"] .alert.cancelled { opacity: 1; text-decoration: line-through; text-decoration-thickness: 2px; }
+html[data-theme="sun"] .alert-ico { background: #fff; border: 2px solid #000; }
+
+/* SOS */
+html[data-theme="sun"] .sos-big { background: #b00000; box-shadow: 0 0 0 6px #000; }
+html[data-theme="sun"] .sos-big.holding .sos-ring { border-color: #000; }
+html[data-theme="sun"] .sos-active.ok { border: 3px solid #005a2b; }
+html[data-theme="sun"] .server-status { background: #005a2b; color: #fff; }
+html[data-theme="sun"] .server-status .muted, html[data-theme="sun"] .server-status .small { color: #fff !important; }
+html[data-theme="sun"] .server-status.stale { background: #ffe500; color: #000; }
+html[data-theme="sun"] .server-status.stale .warn-text, html[data-theme="sun"] .server-status.stale .muted { color: #000 !important; }
+html[data-theme="sun"] .step { border-bottom: 2px solid #000; }
+html[data-theme="sun"] .step.ready { background: #ffe500; }
+html[data-theme="sun"] .hot-num { color: #a30000; }
+
+/* controls */
+html[data-theme="sun"] .btn { background: #fff; color: #000; border: 2px solid #000; font-weight: 800; box-shadow: none; }
+html[data-theme="sun"] .btn.primary { background: #000; color: #fff; border-color: #000; }
+html[data-theme="sun"] .btn.primary:hover { background: #222; }
+html[data-theme="sun"] .btn.danger, html[data-theme="sun"] .btn.speaking { background: #b00000; color: #fff; border-color: #b00000; }
+html[data-theme="sun"] .btn.ghost { background: #fff; color: #0039a6; border-color: transparent; text-decoration: underline; text-decoration-thickness: 2px; }
+html[data-theme="sun"] .btn:disabled { opacity: 1; border-style: dashed; color: #000; }
+html[data-theme="sun"] .chip, html[data-theme="sun"] .input, html[data-theme="sun"] select { border: 2px solid #000; color: #000; background: #fff; font-weight: 700; }
+html[data-theme="sun"] .chip.selected { background: #000; color: #fff; }
+html[data-theme="sun"] .chip.here { background: #b00000; color: #fff; }
+html[data-theme="sun"] .input::placeholder { color: #333; opacity: 1; }
+html[data-theme="sun"] .input:focus { box-shadow: 0 0 0 3px #000; }
+html[data-theme="sun"] .lang-option.selected { background: #000; color: #fff; }
+html[data-theme="sun"] .lang-option.selected .muted { color: #fff !important; }
+html[data-theme="sun"] .badge, html[data-theme="sun"] .verdict { background: #fff; color: #000; border: 2px solid #000; font-weight: 900; }
+html[data-theme="sun"] .badge.open, html[data-theme="sun"] .badge.tr-normal, html[data-theme="sun"] .verdict.true { background: #005a2b; color: #fff; border-color: #005a2b; }
+html[data-theme="sun"] .badge.full, html[data-theme="sun"] .badge.tr-delayed, html[data-theme="sun"] .badge.warn, html[data-theme="sun"] .verdict.unverified { background: #ffe500; color: #000; }
+html[data-theme="sun"] .badge.closed, html[data-theme="sun"] .badge.tr-suspended, html[data-theme="sun"] .verdict.false { background: #b00000; color: #fff; border-color: #b00000; }
+html[data-theme="sun"] .toast { border-radius: 16px; background: #000; color: #fff; border: 3px solid #fff; outline: 2px solid #000; font-weight: 800; }
+html[data-theme="sun"] .toast.ok { background: #005a2b; }
+html[data-theme="sun"] .toast.warn { background: #ffe500; color: #000; }
+html[data-theme="sun"] .toast.danger { background: #b00000; }
+html[data-theme="sun"] .route .line { border-top: 3px dashed #000; }
+html[data-theme="sun"] .route.warn .line { border-top-color: #b00000; }
+html[data-theme="sun"] .route.warn .line span { color: #a30000; }
+html[data-theme="sun"] .route .pin.you { background: #000; }
+html[data-theme="sun"] .route .pin.you::after { background: #fff; box-shadow: none; }
+html[data-theme="sun"] .route .pin.dest { background: #fff; border: 2px solid #000; }
+html[data-theme="sun"] .ai-msg.me { background: #000; color: #fff; }
+html[data-theme="sun"] .ai-msg.bot { background: #fff; border: 2px solid #000; }
+html[data-theme="sun"] .leaflet-bar a, html[data-theme="sun"] .sg-locate a { color: #000; border-color: #000; font-weight: 900; }
+html[data-theme="sun"] .leaflet-bar { border: 2px solid #000; }
+html[data-theme="sun"] .leaflet-control-attribution { color: #000; background: rgba(255,255,255,.9); }

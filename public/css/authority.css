@@ -61,3 +61,11 @@ body.authority .topbar .lang-btn { white-space: nowrap; }
   body.authority .topbar .lang-btn { padding: 5px 8px; font-size: .8rem; min-height: 34px; }
   body.authority .net-pill { padding: 4px 8px; font-size: .78rem; }
 }
+html[data-theme="sun"] .stat, html[data-theme="sun"] .drawbar { border: 2px solid #000; box-shadow: none; }
+html[data-theme="sun"] .stat.hot { background: #b00000; color: #fff; }
+html[data-theme="sun"] .stat.hot b { color: #fff; }
+html[data-theme="sun"] .ptabs button { border: 2px solid #000; color: #000; font-weight: 800; }
+html[data-theme="sun"] .ptabs button.active { background: #000; color: #fff; }
+html[data-theme="sun"] .count { background: #b00000; }
+html[data-theme="sun"] .preview, html[data-theme="sun"] code { background: #fff; border: 2px solid #000; color: #000; }
+html[data-theme="sun"] .sos-item.resolved { opacity: 1; }

@@ -162,6 +162,7 @@
   'ai.unknown': 'Ich helfe bei Unterkünften, Ihrer Sicherheit, offiziellen Warnungen, Verkehr, Notrufnummern, Gerüchten, Wetter, Straßen, Wasser und Essen, Handy-Laden und lokalen Sätzen.',
   'ai.safe': 'Bin ich sicher?',
   'ai.ask': 'Fragen',
+  'sun.mode': 'Sonnenmodus', 'sun.on': 'Sonnenmodus an: Schwarz auf Weiß, lesbar in praller Sonne bei geringer Helligkeit', 'sun.off': 'Normale Farben',
   'install': 'App installieren',
   'relay.title': 'Helfen Sie, eine Notfallnachricht weiterzuleiten',
   'relay.desc': 'Jemand ohne Internet bittet Sie, diese Nachricht weiterzugeben. Sie wird an die Leitstelle gesendet.',

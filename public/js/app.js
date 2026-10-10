@@ -20,7 +20,13 @@
     document.getElementById('lang-code').textContent = lang.toUpperCase();
     Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (e) { e.textContent = t(e.getAttribute('data-i18n')); });
     document.title = t('app.name') + ' — ' + t('app.tagline');
+    var sun = document.getElementById('sun-btn');
+    if (sun) { sun.setAttribute('aria-label', t('sun.mode')); sun.title = t('sun.mode'); }
   }
+  (function () {
+    var sun = document.getElementById('sun-btn');
+    if (sun && window.SGTheme) sun.addEventListener('click', function () { UI.toast(SGTheme.toggle() === 'sun' ? '☀️ ' + t('sun.on') : t('sun.off')); });
+  })();
 
   function langPicker(first) {
     var list = h('div', { class: 'lang-list' }, I18N.LANGS.map(function (l) {

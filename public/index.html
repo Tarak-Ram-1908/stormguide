@@ -6,6 +6,7 @@
   <title>StormGuide — crisis guide for travellers</title>
   <meta name="description" content="Offline-first crisis guide for travellers: official alerts in your language, flooded areas, shelters and SOS that works without internet.">
   <meta name="theme-color" content="#0c264a">
+  <script src="/js/theme.js"></script>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -16,6 +17,7 @@
   <header class="topbar">
     <div class="brand"><img src="/icons/icon-192.png" alt="" width="28" height="28"><span data-i18n="app.name">StormGuide</span></div>
     <div class="net-pill" id="net-pill" role="status" aria-live="polite"><span class="dot"></span><span id="net-text">…</span></div>
+    <button class="lang-btn sun-btn" id="sun-btn" type="button" aria-pressed="false" aria-label="Sunlight mode" title="Sunlight mode">☀️</button>
     <button class="lang-btn" id="lang-btn" type="button" aria-label="Language">🌐 <span id="lang-code">EN</span></button>
   </header>
   <div class="databar" id="databar" role="status" aria-live="polite"></div>

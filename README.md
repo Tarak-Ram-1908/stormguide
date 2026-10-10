@@ -63,6 +63,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 - ♿ Needs profile: step-free access, children, older people, with tailored tips
 - 🔔 Notifications only when danger **increases** for your area (no alert fatigue)
 - 🌧️ Automatic weather card from Open-Meteo with **IMD rainfall categories** (heavy ≥ 64.5 mm, very heavy ≥ 115.6 mm, extremely heavy ≥ 204.5 mm per day), clearly marked "not an official warning"
+- ☀️ Sunlight mode (one tap in the header): pure black on white, bold and larger text, thick borders, no grey or pale colours, so it stays readable in direct sun with the screen dimmed to save battery. Normal mode follows the phone's light/dark setting.
 - 📲 Installable PWA
 
 ## 5. Architecture

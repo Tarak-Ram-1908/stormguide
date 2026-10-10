@@ -162,6 +162,7 @@
   'ai.unknown': 'Puedo ayudarte con refugios, tu seguridad, alertas oficiales, transporte, números de emergencia, rumores, el tiempo, calles, agua y comida, carga del teléfono y frases locales.',
   'ai.safe': '¿Estoy a salvo?',
   'ai.ask': 'Preguntar',
+  'sun.mode': 'Modo sol', 'sun.on': 'Modo sol activado: negro sobre blanco, legible a pleno sol con poco brillo', 'sun.off': 'Colores normales',
   'install': 'Instalar app',
   'relay.title': 'Ayuda a transmitir un mensaje de emergencia',
   'relay.desc': 'Alguien sin internet te pide que transmitas este mensaje. Se enviará al centro de control.',
