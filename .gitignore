@@ -6,3 +6,6 @@ data/*.tmp
 *.pdf
 
 *.msi
+
+*.msi
+*.pdf
