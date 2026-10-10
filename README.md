@@ -2,7 +2,14 @@
 
 **Crisis guide for foreign tourists during extreme weather: official alerts in your language, flooded and unsafe areas, open shelters, and an SOS that still works without internet.**
 
-> Hackathon track: **TravelTech** · Live demo: `https://<your-app>.onrender.com` · Control room: `https://<your-app>.onrender.com/authority.html` (host login; judges can request access on that page) · Demo video: [`demo/StormGuide-demo.mp4`](demo/)
+> Hackathon track: **TravelTech**
+>
+> - **Live app:** https://stormguide.onrender.com
+> - **Control room:** https://stormguide.onrender.com/authority.html (host login; judges can request access on that page)
+> - **Demo video:** [demo/WhatsApp Video 2026-10-10 at 20.41.00.mp4](<demo/WhatsApp Video 2026-10-10 at 20.41.00.mp4>)
+> - **Screenshots:** [demo/](demo/)
+>
+> The free server sleeps when idle: the first visit can take up to a minute to wake it.
 
 ---
 
@@ -122,7 +129,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 - Concurrent live updates during a fetch → client re-fetches once the current fetch finishes
 - XSS → all text rendered with `textContent`; strict Content-Security-Policy; no inline scripts
 - Path traversal, unknown routes, wrong methods → 403 / 404 / 405
-- Authority PIN brute force → 5 attempts per minute; tokens are HMAC-signed and expire after 12 h; Twilio webhook signature verification when `TWILIO_AUTH_TOKEN` is set
+- Host password brute force → rate-limited per IP and per email; passwords need 6+ characters with letters and digits, stored as salted scrypt hashes; tokens are HMAC-signed and expire after 12 h; Twilio webhook signature verification when `TWILIO_AUTH_TOKEN` is set
 - Server restart on free hosting (disk wiped) → demo scenario re-seeds automatically; version numbers stay monotonic so phones don't get confused
 - Right-to-left (Arabic) layout, dark mode, reduced motion, large tap targets, keyboard-operable SOS button
 
@@ -134,11 +141,11 @@ Requirements: **Node.js 18 or newer**. Nothing else.
 git clone https://github.com/<you>/stormguide.git
 cd stormguide
 npm start            # → http://localhost:3000
-npm test             # 28 unit + API tests (node:test, no extra packages)
+npm test             # 30 unit + API tests (node:test, no extra packages)
 ```
 
 - Traveller app: http://localhost:3000
-- Control room: http://localhost:3000/authority.html (log in with a host email and PIN; initial PIN `2026`)
+- Control room: http://localhost:3000/authority.html (log in with a host email and password; initial password `2026`, which must be changed on first login)
 
 > Service workers need HTTPS, except on `localhost`. To test on a phone, use the deployed HTTPS link.
 
@@ -165,13 +172,13 @@ We deploy on **Render** (free web service, HTTPS included; HTTPS is required for
 3. Click **New + → Blueprint**, choose your repository. Render reads `render.yaml`.
    *(Or **New + → Web Service** → pick the repo → Runtime **Node**, Build command `npm install`, Start command `node server.js`, Instance type **Free**.)*
 4. Leave `SMS_NUMBER` empty or put your team phone number. Hosts come from `HOST_EMAILS` (defaults to the two team emails, initial PIN `2026`).
-5. Click **Apply / Create**. After about 2 minutes you get `https://<your-app>.onrender.com`. Open `/api/health` and you should see `{"ok":true,...}`.
-6. **Keep it awake** (Render free instances sleep after 15 minutes idle, and the first request then takes about 50 s): create a free monitor at https://uptimerobot.com → *HTTP(s)* → URL `https://<your-app>.onrender.com/api/health` → every 5 minutes.
+5. Click **Apply / Create**. After about 2 minutes you get `https://stormguide.onrender.com`. Open `/api/health` and you should see `{"ok":true,...}`.
+6. **Keep it awake** (Render free instances sleep after 15 minutes idle, and the first request then takes about 50 s): create a free monitor at https://uptimerobot.com → *HTTP(s)* → URL `https://stormguide.onrender.com/api/health` → every 5 minutes.
 7. Put the live link at the top of this README and in the submission form.
 
 Other hosts: `Procfile` (Railway, Heroku-style) and `Dockerfile` (Koyeb, Fly.io, Cloud Run) are included. Any host that runs `node server.js` works.
 
-**SMS gateway (optional, real SMS):** buy a number on Twilio, set its *"A message comes in"* webhook to `https://<your-app>.onrender.com/api/sms/inbound` (HTTP POST), set `SMS_NUMBER` to that number and `TWILIO_AUTH_TOKEN` to your Twilio auth token. Without Twilio, use the control room's **SMS gateway** tab to paste a received SMS. It goes through exactly the same parser and reply code.
+**SMS gateway (optional, real SMS):** buy a number on Twilio, set its *"A message comes in"* webhook to `https://stormguide.onrender.com/api/sms/inbound` (HTTP POST), set `SMS_NUMBER` to that number and `TWILIO_AUTH_TOKEN` to your Twilio auth token. Without Twilio, use the control room's **SMS gateway** tab to paste a received SMS. It goes through exactly the same parser and reply code.
 
 ## 9. How to try it (for judges, 2 minutes)
 

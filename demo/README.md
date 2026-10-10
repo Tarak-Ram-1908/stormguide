@@ -1,4 +1,6 @@
-# Demo video
+# Demo
 
-Put the recorded demo video here as `StormGuide-demo.mp4` (2–5 minutes, see `../DEMO_SCRIPT.md`).
-GitHub rejects files over 100 MB: compress it (e.g. HandBrake, 720p) or upload to YouTube/Drive and link it in the main README.
+- **Video (about 5 min):** [WhatsApp Video 2026-10-10 at 20.41.00.mp4](<WhatsApp Video 2026-10-10 at 20.41.00.mp4>)
+- **Screenshots:** the 15 `WhatsApp Image …jpeg` files in this folder, in the order they were taken.
+- **Live app:** https://stormguide.onrender.com
+- **Control room:** https://stormguide.onrender.com/authority.html
