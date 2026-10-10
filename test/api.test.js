@@ -6,7 +6,8 @@ const path = require('path');
 const fs = require('fs');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sg-test-'));
-process.env.AUTHORITY_PIN = '4321';
+process.env.HOST_EMAILS = 'a@test.org,b@test.org';
+process.env.INITIAL_PIN = '4321';
 const { createServer } = require('../server');
 
 let base, server;
@@ -53,7 +54,7 @@ test('SOS over internet then SMS with the same id merges channels', async () => 
   const smsRes = await fetch(base + '/api/sms/inbound', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'From=%2B91999&Body=' + encodeURIComponent('SOS 13.04000,80.23000 P:2 L:fr ID:sos-test-1') });
   const xml = await smsRes.text();
   assert.match(xml, /SOS reçu/);
-  const tok = (await (await post('/api/auth', { pin: '4321' })).json()).token;
+  const tok = (await (await post('/api/auth', { email: 'a@test.org', pin: '4321' })).json()).token;
   const ov = await (await fetch(base + '/api/admin/overview', { headers: { Authorization: 'Bearer ' + tok } })).json();
   const s = ov.sos.filter(x => x.id === 'sos-test-1');
   assert.equal(s.length, 1);
@@ -78,11 +79,12 @@ test('QR relay forwards a report', async () => {
 test('authority endpoints require a valid token; wrong PIN rejected', async () => {
   assert.equal((await fetch(base + '/api/admin/overview')).status, 401);
   assert.equal((await fetch(base + '/api/admin/overview', { headers: { Authorization: 'Bearer 9999999999999.forged' } })).status, 401);
-  assert.equal((await post('/api/auth', { pin: '0000' })).status, 401);
+  assert.equal((await post('/api/auth', { email: 'a@test.org', pin: '0000' })).status, 401);
+  assert.equal((await post('/api/auth', { email: 'stranger@test.org', pin: '4321' })).status, 401, 'non-hosts cannot log in');
 });
 
 test('authority publishes an alert with fixed instructions only; update bumps revision; cancel', async () => {
-  const tok = (await (await post('/api/auth', { pin: '4321' })).json()).token;
+  const tok = (await (await post('/api/auth', { email: 'a@test.org', pin: '4321' })).json()).token;
   const H = { Authorization: 'Bearer ' + tok };
   const poly = [[13.0, 80.2], [13.0, 80.25], [12.97, 80.25], [12.97, 80.2]];
   const bad = await post('/api/admin/alerts', { event: 'flood', severity: 'Severe', headline: 'Test', instructions: ['run_around'], area: { name: 'X', polygon: poly } }, H);
@@ -96,7 +98,7 @@ test('authority publishes an alert with fixed instructions only; update bumps re
 });
 
 test('zones from circle, report promotion to zone, simulation steps', async () => {
-  const tok = (await (await post('/api/auth', { pin: '4321' })).json()).token;
+  const tok = (await (await post('/api/auth', { email: 'a@test.org', pin: '4321' })).json()).token;
   const H = { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' };
   const z = await (await post('/api/admin/zones', { kind: 'flooded', name: 'Circle', center: [13.02, 80.22], radiusKm: 0.3 }, H)).json();
   assert.equal(z.zone.polygon.length, 24);
@@ -128,4 +130,38 @@ test('oversized and malformed bodies are rejected', async () => {
   assert.equal(big.status, 413);
   const bad = await fetch(base + '/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{nope' });
   assert.equal(bad.status, 400);
+});
+
+test('hosts: access request -> approve -> new host logs in; PIN change; founders protected', async () => {
+  const login = async (email, pin) => { const r = await post('/api/auth', { email, pin }); const j = await r.json(); if (!j.token) console.log('LOGIN FAIL', email, r.status, j); return j; };
+  const b = await login('b@test.org', '4321');
+  assert.ok(b.token); assert.equal(b.mustChangePin, true);
+  const H = { Authorization: 'Bearer ' + b.token };
+  // change PIN
+  assert.equal((await post('/api/admin/pin', { currentPin: 'nope', newPin: '9876' }, H)).status, 401);
+  assert.equal((await post('/api/admin/pin', { currentPin: '4321', newPin: '9876' }, H)).status, 200);
+  assert.equal((await post('/api/auth', { email: 'b@test.org', pin: '4321' })).status, 401, 'old PIN stops working');
+  const b2 = await login('b@test.org', '9876');
+  const H2 = { Authorization: 'Bearer ' + b2.token };
+  // request access
+  const rq = await post('/api/access-request', { name: 'New Officer', email: 'new@test.org', reason: 'NDRF', pin: '5555x' });
+  assert.equal(rq.status, 201);
+  assert.equal((await post('/api/access-request', { name: 'New Officer', email: 'new@test.org', pin: '5555x' })).status, 409, 'no duplicate');
+  assert.equal((await post('/api/auth', { email: 'new@test.org', pin: '5555x' })).status, 401, 'cannot log in before approval');
+  const list = await (await fetch(base + '/api/admin/hosts', { headers: H2 })).json();
+  assert.equal(list.requests.length, 1);
+  const ap = await post('/api/admin/requests/' + list.requests[0].id, { action: 'approve' }, H2);
+  assert.equal(ap.status, 200);
+  const n = await login('new@test.org', '5555x');
+  assert.ok(n.token, 'approved host can log in');
+  // new host cannot remove founders, but founders can remove the new host
+  const del1 = await fetch(base + '/api/admin/hosts/a%40test.org', { method: 'DELETE', headers: { Authorization: 'Bearer ' + n.token } });
+  assert.equal(del1.status, 403);
+  const del2 = await fetch(base + '/api/admin/hosts/new%40test.org', { method: 'DELETE', headers: H2 });
+  assert.equal(del2.status, 200);
+  assert.equal((await fetch(base + '/api/admin/overview', { headers: { Authorization: 'Bearer ' + n.token } })).status, 401, 'removed host loses access at once');
+  // scenario reset keeps accounts
+  await post('/api/admin/reset', { scenario: 'chennai-calm' }, H2);
+  assert.ok((await login('b@test.org', '9876')).token);
+  await post('/api/admin/reset', { scenario: 'chennai-flood' }, H2);
 });

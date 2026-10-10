@@ -16,17 +16,31 @@
     <div class="brand"><img src="/icons/icon-192.png" alt="" width="28" height="28"><span>StormGuide · Control room</span></div>
     <div class="net-pill" id="net-pill"><span class="dot"></span><span id="net-text">…</span></div>
     <a class="lang-btn" href="/" target="_blank" rel="noopener">Traveller app ↗</a>
+    <button class="lang-btn" id="change-pin" type="button" hidden>Change PIN</button>
     <button class="lang-btn" id="logout" type="button" hidden>Log out</button>
   </header>
 
   <div id="login" class="login card">
     <h2>Control room login</h2>
-    <p class="muted small">For disaster-management officials. Demo PIN: <strong>2026</strong> (set <code>AUTHORITY_PIN</code> in production).</p>
+    <p class="muted small">Only approved hosts can change alerts, zones, shelters and other data.</p>
     <form id="login-form">
+      <input class="input" id="email" type="email" autocomplete="username" placeholder="Host email" required maxlength="254">
       <input class="input" id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" required maxlength="32">
       <button class="btn primary block" type="submit">Log in</button>
     </form>
     <div id="login-error" class="warn-text"></div>
+    <details class="request-box">
+      <summary>Not a host? Request access</summary>
+      <p class="muted small">Your request is sent to the current hosts. You can log in once one of them approves it.</p>
+      <form id="request-form">
+        <input class="input" id="rq-name" type="text" placeholder="Your name" required maxlength="80">
+        <input class="input" id="rq-email" type="email" placeholder="Your email" required maxlength="254">
+        <input class="input" id="rq-reason" type="text" placeholder="Organisation / reason (optional)" maxlength="300">
+        <input class="input" id="rq-pin" type="password" inputmode="numeric" placeholder="Choose a PIN (min 4 characters)" required minlength="4" maxlength="32">
+        <button class="btn block" type="submit">Send request</button>
+      </form>
+      <div id="request-result" class="small"></div>
+    </details>
   </div>
 
   <div id="app" class="console" hidden>
@@ -46,6 +60,7 @@
           <button data-p="rumors">🕵️ Rumors</button>
           <button data-p="sms">✉️ SMS gateway</button>
           <button data-p="sim">🎬 Simulation</button>
+          <button data-p="hosts">👥 Hosts <span id="host-count" class="count"></span></button>
         </nav>
         <div id="panel" class="panel"></div>
       </div>

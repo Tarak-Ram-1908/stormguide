@@ -23,9 +23,17 @@
     if (typeof L === 'undefined') { container.textContent = 'Map library failed to load.'; return null; }
     var st = SG.state;
     var center = SG.point() || (st ? st.region.center : [13.05, 80.24]);
-    map = L.map(container, { zoomControl: true, attributionControl: true, preferCanvas: false }).setView(center, st ? st.region.zoom : 12);
+    map = L.map(container, {
+      zoomControl: true, attributionControl: true, preferCanvas: false,
+      zoomSnap: 1, zoomDelta: 1, wheelPxPerZoomLevel: 120, bounceAtZoomLimits: false, tapTolerance: 20
+    }).setView(center, st ? st.region.zoom : 12);
+    // Keep Leaflet's size in sync with the container (tab switches, rotation, mobile URL bar).
+    if (typeof ResizeObserver !== 'undefined') {
+      var pending = null;
+      new ResizeObserver(function () { clearTimeout(pending); pending = setTimeout(function () { map.invalidateSize({ pan: false }); }, 100); }).observe(container);
+    }
     L.tileLayer(SG.tileUrl, {
-      maxZoom: 18, minZoom: 3, crossOrigin: true,
+      maxZoom: 18, minZoom: 9, crossOrigin: true, keepBuffer: 4, updateWhenZooming: false,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
     ['alerts', 'zones', 'closures', 'reports', 'shelters'].forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
@@ -39,7 +47,12 @@
     return map;
   };
 
-  M.invalidate = function () { if (map) setTimeout(function () { map.invalidateSize(); }, 50); };
+  M.invalidate = function () {
+    if (!map) return;
+    // Two passes: once after the tab becomes visible, once after layout settles.
+    requestAnimationFrame(function () { map.invalidateSize({ pan: false }); });
+    setTimeout(function () { map.invalidateSize({ pan: false }); }, 300);
+  };
 
   M.pick = function (cb) {
     picking = true; onPick = cb;

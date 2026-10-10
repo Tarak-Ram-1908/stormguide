@@ -22,7 +22,12 @@ const I18N = require('./public/js/i18n.js');
 const Geo = require('./public/js/geo.js');
 
 const PORT = Number(process.env.PORT) || 3000;
-const AUTHORITY_PIN = String(process.env.AUTHORITY_PIN || '2026');
+// Control-room hosts. Only these people (plus hosts they approve) can change data.
+const FOUNDER_HOSTS = String(process.env.HOST_EMAILS || 'lokesh09006@gmail.com,alaharitarak@gmail.com')
+  .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+const INITIAL_PIN = String(process.env.INITIAL_PIN || '2026');
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';      // optional: email hosts about access requests
+const NOTIFY_FROM = process.env.NOTIFY_FROM || 'StormGuide <onboarding@resend.dev>';
 const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const SMS_NUMBER = String(process.env.SMS_NUMBER || '').replace(/[^\d+]/g, '');
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
@@ -214,26 +219,72 @@ setInterval(() => { // forget idle buckets
 // ---------------------------------------------------------------- auth
 
 function sign(payload) { return crypto.createHmac('sha256', SECRET).update(payload).digest('base64url'); }
-function issueToken() {
-  const exp = String(Date.now() + TOKEN_TTL);
-  return exp + '.' + sign(exp);
+
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i;
+function normEmail(v) {
+  const e = V.str(v, 'email', { min: 5, max: 254 }).toLowerCase();
+  if (!EMAIL_RE.test(e)) V.fail('Enter a valid email address');
+  return e;
 }
-function verifyToken(tok) {
-  if (typeof tok !== 'string' || !tok.includes('.')) return false;
-  const [exp, sig] = tok.split('.');
-  if (!/^\d{10,16}$/.test(exp) || Number(exp) < Date.now()) return false;
-  const a = Buffer.from(sign(exp)), b = Buffer.from(sig || '');
+function checkPin(v, name = 'PIN') {
+  const pin = V.str(v, name, { min: 4, max: 32 });
+  if (/^(\d)\1+$/.test(pin)) V.fail('Choose a PIN that is not all the same digit');
+  return pin;
+}
+function hashPin(pin, salt) { return crypto.scryptSync(String(pin), salt, 32).toString('hex'); }
+function newPinRecord(pin) { const salt = crypto.randomBytes(16).toString('hex'); return { salt, pinHash: hashPin(pin, salt) }; }
+function pinOk(rec, pin) {
+  if (!rec || !rec.salt) { hashPin(String(pin || ''), 'x'.repeat(32)); return false; } // same work either way
+  const a = Buffer.from(hashPin(String(pin || ''), rec.salt), 'hex'), b = Buffer.from(rec.pinHash, 'hex');
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/** Founders always exist (initial PIN until they change it). */
+function ensureHosts() {
+  store.mutate((pub, priv) => {
+    priv.hosts = priv.hosts || {};
+    priv.accessRequests = priv.accessRequests || [];
+    for (const email of FOUNDER_HOSTS) {
+      if (!priv.hosts[email]) priv.hosts[email] = Object.assign({ founder: true, addedAt: new Date().toISOString(), addedBy: 'setup', pinChanged: false }, newPinRecord(INITIAL_PIN));
+      else priv.hosts[email].founder = true;
+    }
+  }, { privateOnly: true });
+}
+function hosts() { return store.get().private.hosts || {}; }
+
+function issueToken(email) {
+  const payload = Buffer.from(email).toString('base64url') + '.' + String(Date.now() + TOKEN_TTL);
+  return payload + '.' + sign(payload);
+}
+/** Returns the host email for a valid token, or null. Removed hosts lose access immediately. */
+function verifyToken(tok) {
+  if (typeof tok !== 'string') return null;
+  const parts = tok.split('.');
+  if (parts.length !== 3) return null;
+  const [em, exp, sig] = parts;
+  if (!/^\d{10,16}$/.test(exp) || Number(exp) < Date.now()) return null;
+  const a = Buffer.from(sign(em + '.' + exp)), b = Buffer.from(sig || '');
+  if (!(a.length === b.length && crypto.timingSafeEqual(a, b))) return null;
+  let email;
+  try { email = Buffer.from(em, 'base64url').toString('utf8'); } catch (e) { return null; }
+  return hosts()[email] ? email : null;
 }
 function requireAuth(req, url) {
   const h = req.headers.authorization || '';
   const tok = h.startsWith('Bearer ') ? h.slice(7) : url.searchParams.get('token');
-  if (!verifyToken(tok)) throw new HttpError(401, 'Authority login required');
+  const email = verifyToken(tok);
+  if (!email) throw new HttpError(401, 'Host login required');
+  return email;
 }
-function pinMatches(pin) {
-  const a = crypto.createHash('sha256').update(String(pin || '')).digest();
-  const b = crypto.createHash('sha256').update(AUTHORITY_PIN).digest();
-  return crypto.timingSafeEqual(a, b);
+
+function notifyHostsByEmail(subject, text) {
+  if (!RESEND_API_KEY || typeof fetch !== 'function') return;
+  const to = Object.keys(hosts());
+  fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: NOTIFY_FROM, to, subject, text })
+  }).then(r => { if (!r.ok) console.error('[notify] email failed', r.status); }).catch(e => console.error('[notify]', e.message));
 }
 
 // ---------------------------------------------------------------- live updates (SSE)
@@ -250,6 +301,9 @@ store.events.on('change', (version) => {
 store.events.on('sos', (data) => {
   for (const c of sseClients) if (c.authority) sseSend(c, 'sos', data);
 });
+store.events.on('access', (data) => {
+  for (const c of sseClients) if (c.authority) sseSend(c, 'access', data);
+});
 
 setInterval(() => {
   for (const c of sseClients) { try { c.res.write(': ping\n\n'); } catch (e) { /* ignore */ } }
@@ -257,7 +311,7 @@ setInterval(() => {
 
 function handleStream(req, res, url) {
   let authority = false;
-  if (url.searchParams.get('token')) authority = verifyToken(url.searchParams.get('token'));
+  if (url.searchParams.get('token')) authority = !!verifyToken(url.searchParams.get('token'));
   req.socket.setTimeout(0);
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -498,20 +552,99 @@ route('POST', '/api/sms/inbound', async (req, res, p, url) => {
 });
 
 route('POST', '/api/auth', async (req, res) => {
-  rateLimit(req, 'auth', 5, 5);
+  rateLimit(req, 'auth', 20, 20);
   const body = V.obj(await readBody(req));
-  if (!pinMatches(body.pin)) throw new HttpError(401, 'Wrong PIN');
-  sendJson(req, res, 200, { ok: true, token: issueToken(), expiresInSec: TOKEN_TTL / 1000 });
+  const email = normEmail(body.email);
+  rateLimit({ headers: {}, socket: { remoteAddress: 'email:' + email } }, 'auth-email', 8, 8); // per-account brute-force limit
+  const rec = hosts()[email];
+  if (!pinOk(rec, body.pin)) throw new HttpError(401, 'Wrong email or PIN');
+  sendJson(req, res, 200, { ok: true, token: issueToken(email), email, founder: !!rec.founder, mustChangePin: !rec.pinChanged, expiresInSec: TOKEN_TTL / 1000 });
+});
+
+// Anyone can ASK to become a host; only existing hosts can approve.
+route('POST', '/api/access-request', async (req, res) => {
+  rateLimit(req, 'access', 3, 3);
+  const body = V.obj(await readBody(req));
+  const email = normEmail(body.email);
+  const name = V.str(body.name, 'name', { min: 2, max: 80 });
+  const reason = V.str(body.reason, 'reason', { max: 300, optional: true });
+  const pin = checkPin(body.pin);
+  const r = store.mutate((pub, priv) => {
+    priv.accessRequests = priv.accessRequests || [];
+    if ((priv.hosts || {})[email]) throw new HttpError(409, 'This email is already a host');
+    const dup = priv.accessRequests.find(x => x.email === email && x.status === 'pending');
+    if (dup) throw new HttpError(409, 'A request for this email is already waiting for approval');
+    if (priv.accessRequests.filter(x => x.status === 'pending').length >= 50) throw new HttpError(429, 'Too many pending requests');
+    const reqRec = Object.assign({ id: 'ar-' + V.newId(8), email, name, reason, status: 'pending', createdAt: new Date().toISOString() }, newPinRecord(pin));
+    priv.accessRequests.push(reqRec);
+    if (priv.accessRequests.length > 200) priv.accessRequests = priv.accessRequests.slice(-200);
+    return reqRec;
+  }, { privateOnly: true });
+  store.events.emit('access', { id: r.id, name, email });
+  notifyHostsByEmail('StormGuide: ' + name + ' asks for control-room access',
+    name + ' (' + email + ') asked to become a StormGuide host.\nReason: ' + (reason || '-') + '\n\nApprove or reject in the control room: ' + (PUBLIC_URL || '') + '/authority.html');
+  sendJson(req, res, 201, { ok: true, status: 'pending' });
 });
 
 // ---- authority (all require a valid token)
 function admin(method, pattern, handler) {
   route(method, pattern, async (req, res, p, url) => {
-    requireAuth(req, url);
+    const email = requireAuth(req, url);
     rateLimit(req, 'admin', 240, 60);
+    req.host = email;
     return handler(req, res, p, url);
   });
 }
+
+function hostView() {
+  const h = hosts();
+  const reqs = (store.get().private.accessRequests || []);
+  return {
+    hosts: Object.keys(h).sort().map(e => ({ email: e, founder: !!h[e].founder, addedAt: h[e].addedAt, addedBy: h[e].addedBy })),
+    requests: reqs.filter(r => r.status === 'pending').map(r => ({ id: r.id, email: r.email, name: r.name, reason: r.reason, createdAt: r.createdAt }))
+  };
+}
+
+admin('GET', '/api/admin/hosts', (req, res) => sendJson(req, res, 200, Object.assign({ ok: true, me: req.host }, hostView())));
+
+admin('POST', '/api/admin/pin', async (req, res) => {
+  const b = V.obj(await readBody(req));
+  const rec = hosts()[req.host];
+  if (!pinOk(rec, b.currentPin)) throw new HttpError(401, 'Current PIN is wrong');
+  const pin = checkPin(b.newPin, 'new PIN');
+  if (pin === INITIAL_PIN) V.fail('Choose a PIN different from the initial PIN');
+  store.mutate((pub, priv) => { Object.assign(priv.hosts[req.host], newPinRecord(pin), { pinChanged: true }); }, { privateOnly: true });
+  sendJson(req, res, 200, { ok: true });
+});
+
+admin('POST', '/api/admin/requests/:id', async (req, res, p) => {
+  const b = V.obj(await readBody(req));
+  const action = V.oneOf(b.action, ['approve', 'reject'], 'action');
+  store.mutate((pub, priv) => {
+    const r = findOr404(priv.accessRequests || [], p.id, 'Request');
+    if (r.status !== 'pending') throw new HttpError(409, 'Request already handled');
+    r.status = action === 'approve' ? 'approved' : 'rejected';
+    r.decidedBy = req.host; r.decidedAt = new Date().toISOString();
+    if (action === 'approve') {
+      priv.hosts[r.email] = { founder: false, salt: r.salt, pinHash: r.pinHash, pinChanged: true, addedAt: r.decidedAt, addedBy: req.host, name: r.name };
+    }
+    delete r.salt; delete r.pinHash;
+  }, { privateOnly: true });
+  store.events.emit('access', { id: p.id, decided: action });
+  sendJson(req, res, 200, Object.assign({ ok: true }, hostView()));
+});
+
+admin('DELETE', '/api/admin/hosts/:email', (req, res, p) => {
+  const email = String(p.email).toLowerCase();
+  store.mutate((pub, priv) => {
+    const h = priv.hosts[email];
+    if (!h) throw new HttpError(404, 'Host not found');
+    if (h.founder) throw new HttpError(403, 'Founding hosts cannot be removed');
+    delete priv.hosts[email];
+  }, { privateOnly: true });
+  store.events.emit('access', { removed: true });
+  sendJson(req, res, 200, Object.assign({ ok: true }, hostView()));
+});
 
 admin('GET', '/api/admin/overview', (req, res) => {
   const d = store.get();
@@ -522,8 +655,10 @@ admin('GET', '/api/admin/overview', (req, res) => {
       liveClients: sseClients.size,
       version: d.version,
       sosOpen: sos.filter(s => s.status !== 'resolved').length,
-      reportsUnverified: d.public.reports.filter(r => r.status === 'unverified').length
+      reportsUnverified: d.public.reports.filter(r => r.status === 'unverified').length,
+      accessRequests: (d.private.accessRequests || []).filter(r => r.status === 'pending').length
     },
+    me: req.host,
     simulation: simInfo(),
     config: publicConfig(),
     serverTime: Date.now()
@@ -721,6 +856,7 @@ function onError(req, res, err) {
 
 function createServer() {
   store.load();
+  ensureHosts();
   const server = http.createServer((req, res) => {
     Promise.resolve().then(() => handle(req, res)).catch((err) => onError(req, res, err));
   });
@@ -736,7 +872,7 @@ if (require.main === module) {
   const server = createServer();
   server.listen(PORT, () => {
     console.log(`StormGuide running on http://localhost:${PORT}  (build ${BUILD_ID})`);
-    if (AUTHORITY_PIN === '2026') console.log('Authority PIN is the demo default (2026). Set AUTHORITY_PIN in production.');
+    console.log('Control-room hosts: ' + FOUNDER_HOSTS.join(', ') + ' (initial PIN until each host changes it)');
   });
   const shutdown = () => { store.saveNow(); for (const c of sseClients) { try { c.res.end(); } catch (e) { /* */ } } server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
   process.on('SIGTERM', shutdown);

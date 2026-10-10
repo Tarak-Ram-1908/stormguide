@@ -101,7 +101,11 @@ function publicState() {
 
 function reset(name) {
   const prev = db ? db.version : 0;
+  const keep = db ? { hosts: db.private.hosts, accessRequests: db.private.accessRequests } : {};
   db = fresh(name);
+  // Resetting the demo scenario never deletes control-room accounts.
+  if (keep.hosts) db.private.hosts = keep.hosts;
+  if (keep.accessRequests) db.private.accessRequests = keep.accessRequests;
   db.version = Math.max(db.version, prev + 1);
   events.emit('change', db.version);
   saveNow();

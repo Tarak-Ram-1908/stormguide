@@ -359,6 +359,13 @@
     });
   };
 
+  /** Remove all downloaded / cached map tiles (they live in the browser's Cache Storage). */
+  SG.deleteOfflineMap = function () {
+    SG.prefs.offlinePack = null; SG.savePrefs();
+    if (!('caches' in root)) return Promise.resolve();
+    return caches.delete('sg-tiles-v1').catch(function () { /* ignore */ });
+  };
+
   // ------------------------------------------------------------ weather (automatic, clearly not official)
   /** IMD 24-h rainfall categories (mm): heavy 64.5-115.5, very heavy 115.6-204.4, extremely heavy >= 204.5. */
   SG.weatherAdvice = function (w) {

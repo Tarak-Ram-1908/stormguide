@@ -2,7 +2,7 @@
 
 **Crisis guide for foreign tourists during extreme weather: official alerts in your language, flooded and unsafe areas, open shelters, and an SOS that still works without internet.**
 
-> Hackathon track: **TravelTech** · Live demo: `https://<your-app>.onrender.com` · Control room: `https://<your-app>.onrender.com/authority.html` (demo PIN `2026`) · Demo video: [`demo/StormGuide-demo.mp4`](demo/)
+> Hackathon track: **TravelTech** · Live demo: `https://<your-app>.onrender.com` · Control room: `https://<your-app>.onrender.com/authority.html` (host login; judges can request access on that page) · Demo video: [`demo/StormGuide-demo.mp4`](demo/)
 
 ---
 
@@ -22,7 +22,7 @@ StormGuide is an **offline-first web app** (PWA, no install or app store needed:
 
 | For the traveller | For the control room |
 |---|---|
-| Personal risk: *"You are inside a danger area: Velachery (flooded)"*, worked out on the phone | Publish alerts with **fixed, pre-translated instructions**. Officials write once, travellers read them in 9 languages |
+| Personal risk: *"You are inside a danger area: Velachery (flooded)"*, worked out on the phone | Publish alerts with **fixed, pre-translated instructions**. Officials write once, travellers read them in 10 languages |
 | Official alerts translated **without machine translation**, with the original official text always one tap away | Draw flooded/unsafe/safe zones and closed roads on a map |
 | Nearest **open** shelter, places left, step-free access, and a warning if the straight line crosses a flooded zone or closed road | Update shelter occupancy and transport status |
 | **Compass guide** to the shelter that works with no map and no internet | SOS queue: acknowledge, dispatch with an arrival time, resolve; the traveller sees *"Help is on the way: about 20 min"* |
@@ -35,7 +35,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 
 ## 3. What makes it different (innovation)
 
-1. **Safe translation by design.** Officials don't type free-text instructions. They tick items from a fixed list of 15 instructions (e.g. *"Move to higher ground or an upper floor now"*) that we pre-translated into 9 languages. A translation can never invent, drop or soften an order. The official's own headline and description are shown **verbatim**, labelled with their language and source, so nothing is hidden. (A unit test checks that every language covers every safety phrase and keeps every placeholder.)
+1. **Safe translation by design.** Officials don't type free-text instructions. They tick items from a fixed list of 15 instructions (e.g. *"Move to higher ground or an upper floor now"*) that we pre-translated into 10 languages. A translation can never invent, drop or soften an order. The official's own headline and description are shown **verbatim**, labelled with their language and source, so nothing is hidden. (A unit test checks that every language covers every safety phrase and keeps every placeholder.)
 2. **A 3-step SOS fallback chain.** (1) internet: POST to the control room, stored first in an IndexedDB outbox and retried automatically; (2) SMS: a short coded message, `SOS 13.04001,80.23370 P:2 S:TRAP L:fr ID:k3j9x2mq7a`, that a gateway parses and answers in the sender's language; (3) a one-tap call to 112. The **same request ID** travels on every channel, so the server merges them and rescuers see one request "via web + sms" instead of duplicates.
 3. **Store-carry-forward QR relay.** With no signal at all, the phone shows a QR code holding the SOS. Anyone nearby scans it with their camera and their phone forwards it. If they are offline too, it waits in their outbox (a delay-tolerant network made of people).
 4. **Privacy-preserving risk.** The server publishes zones. Each phone checks for itself whether it is inside or near one (point-in-polygon, distance to edge). A traveller's location never leaves the phone unless they send an SOS or a report.
@@ -44,7 +44,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 
 ## 4. Feature checklist
 
-- 🌐 9 languages: English, தமிழ், हिन्दी, Français, Deutsch, Español, 中文, 日本語, العربية (full right-to-left layout)
+- 🌐 10 languages: English, தமிழ், हिन्दी, తెలుగు, Français, Deutsch, Español, 中文, 日本語, العربية (full right-to-left layout)
 - 📶 Offline: service worker precaches the whole app; network-first with 3 s timeout, cached fallback; data-age banner; stale warning after 3 h
 - 🔴 Live: Server-Sent Events push every change to every phone in about a second; polling fallback; ETag/304 to save data
 - ⚠️ Personal risk card: inside zone / near (≤ 1.5 km) / alert area / clear; safe-zone note
@@ -70,7 +70,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
  ┌───────────────────────────────┐                  ┌───────────────────────────┐
  │ index.html  app.js  core.js   │  GET /api/state  │ authority.html            │
  │ map.js (Leaflet)              │◄──── ETag ───────│ authority.js              │
- │ i18n/*.js (9 languages)       │  SSE /api/stream │  publish / verify /       │
+ │ i18n/*.js (10 languages)       │  SSE /api/stream │  publish / verify /       │
  │ geo.js  (risk maths, offline) │◄──── push ───────│  dispatch / simulate      │
  │ db.js   (IndexedDB outbox)    │                  └────────────┬──────────────┘
  │ sw.js   (cache + bg sync)     │  POST /api/sos, /api/reports │ Bearer token
@@ -135,7 +135,7 @@ npm test             # 28 unit + API tests (node:test, no extra packages)
 ```
 
 - Traveller app: http://localhost:3000
-- Control room: http://localhost:3000/authority.html (PIN `2026`)
+- Control room: http://localhost:3000/authority.html (log in with a host email and PIN; initial PIN `2026`)
 
 > Service workers need HTTPS, except on `localhost`. To test on a phone, use the deployed HTTPS link.
 
@@ -144,7 +144,9 @@ npm test             # 28 unit + API tests (node:test, no extra packages)
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `3000` | HTTP port (Render sets it automatically) |
-| `AUTHORITY_PIN` | `2026` | Control-room PIN. **Change it in production.** |
+| `HOST_EMAILS` | `lokesh09006@gmail.com,alaharitarak@gmail.com` | Founding control-room hosts (comma-separated). Only hosts can change data |
+| `INITIAL_PIN` | `2026` | First PIN for founding hosts; each host is asked to change it after logging in |
+| `RESEND_API_KEY` / `NOTIFY_FROM` | empty | Optional: email all hosts when someone requests access (via resend.com). Without it, hosts get a sound + pop-up in the control room |
 | `SESSION_SECRET` | random at boot | Signs control-room tokens (set it so logins survive restarts) |
 | `SMS_NUMBER` | empty | Number that receives coded SOS SMS. If empty, the traveller picks a recipient (e.g. family); the SMS includes a Google Maps link so a person can read it |
 | `TWILIO_AUTH_TOKEN` | empty | If set, `/api/sms/inbound` rejects requests without a valid Twilio signature |
@@ -159,7 +161,7 @@ We deploy on **Render** (free web service, HTTPS included; HTTPS is required for
 2. Go to https://render.com → sign in with GitHub.
 3. Click **New + → Blueprint**, choose your repository. Render reads `render.yaml`.
    *(Or **New + → Web Service** → pick the repo → Runtime **Node**, Build command `npm install`, Start command `node server.js`, Instance type **Free**.)*
-4. When asked, enter `AUTHORITY_PIN` (any PIN you like; tell the judges, or keep `2026` for the demo). Leave `SMS_NUMBER` empty or put your team phone number.
+4. Leave `SMS_NUMBER` empty or put your team phone number. Hosts come from `HOST_EMAILS` (defaults to the two team emails, initial PIN `2026`).
 5. Click **Apply / Create**. After about 2 minutes you get `https://<your-app>.onrender.com`. Open `/api/health` and you should see `{"ok":true,...}`.
 6. **Keep it awake** (Render free instances sleep after 15 minutes idle, and the first request then takes about 50 s): create a free monitor at https://uptimerobot.com → *HTTP(s)* → URL `https://<your-app>.onrender.com/api/health` → every 5 minutes.
 7. Put the live link at the top of this README and in the submission form.
@@ -174,9 +176,17 @@ Other hosts: `Procfile` (Railway, Heroku-style) and `Dockerfile` (Koyeb, Fly.io,
 2. If you are not in Chennai, tap **Demo location** → *Velachery* (inside a flooded zone) or *T. Nagar* (near one).
 3. Read the alerts: the Tamil-language flood warning appears with instructions in your language; tap **Original official text** to see the untranslated Tamil.
 4. Tap **Guide me** on the nearest shelter → compass.
-5. Open the control room on a laptop (`/authority.html`, PIN `2026`) → **Simulation → Start manual → Next step** and watch the phone update live.
+5. Open the control room on a laptop (`/authority.html`; ask the team for a host login, or use **Request access** and a host approves you) → **Simulation → Start manual → Next step** and watch the phone update live.
 6. On the phone: **SOS** → hold the button → in the control room, **Dispatch** → the phone shows "Help is on the way: about 20 min".
 7. Turn on **airplane mode** → reload the app: it still opens, shows the saved data, and SOS moves straight to **SMS** then **112**. Submit a report offline → turn the network back on → it sends itself.
+
+### Control-room access (hosts)
+
+- Only **hosts** can change alerts, zones, shelters, transport, rumors, reports and SOS status. Travellers can only *send* reports and SOS; every `/api/admin/*` endpoint checks a signed host token.
+- Founding hosts: the emails in `HOST_EMAILS`. Log in with email + PIN (initial `2026`); the console asks you to set your own PIN (stored as a salted scrypt hash).
+- Anyone else opens `/authority.html` → **Request access** (name, email, reason, chosen PIN). All logged-in hosts get a sound and a pop-up, and an email if `RESEND_API_KEY` is set. Any host can **approve** or **reject** in the **👥 Hosts** tab, and remove added hosts. Founding hosts cannot be removed; a removed host loses access immediately.
+- Brute-force protection: login is rate-limited per IP and per email.
+- ⚠️ On Render's free plan the disk is temporary: after a restart or redeploy, approved hosts and changed PINs go back to the defaults. For permanent accounts, add `HOST_EMAILS` entries in Render → Environment, or attach a persistent disk / database.
 
 ## 10. Libraries, APIs and data (disclosure)
 

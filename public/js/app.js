@@ -170,16 +170,44 @@
     UI.mount('tips', tips.length ? h('div', { class: 'card tips' }, tips.map(function (x) { return h('div', { text: x }); })) : null);
   }
 
-  function speak(text) {
-    if (!('speechSynthesis' in window)) { UI.toast('Text-to-speech not available', 'warn'); return; }
-    try {
-      speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang = I18N.langInfo(SG.lang()).tts;
-      u.rate = 0.95;
-      speechSynthesis.speak(u);
-    } catch (e) { /* ignore */ }
+  // Read-aloud with a real stop. State is kept by text key, so buttons survive live re-renders.
+  var speakingKey = null;
+  function markButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll('button[data-speak]'), function (b) {
+      var on = b.getAttribute('data-speak') === speakingKey;
+      b.textContent = on ? '⏹ Stop' : b.getAttribute('data-label');
+      b.classList.toggle('speaking', on);
+    });
   }
+  function stopSpeaking() {
+    try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    speakingKey = null;
+    markButtons();
+  }
+  function speak(text, lang) {
+    if (!('speechSynthesis' in window)) { UI.toast('Text-to-speech not available on this device', 'warn'); return; }
+    var same = speakingKey === text;
+    stopSpeaking();
+    if (same) return; // second tap = stop
+    try {
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = lang || I18N.langInfo(SG.lang()).tts;
+      u.rate = 0.95;
+      u.onend = u.onerror = function () { if (speakingKey === text) { speakingKey = null; markButtons(); } };
+      speakingKey = text;
+      markButtons();
+      speechSynthesis.speak(u);
+    } catch (e) { stopSpeaking(); }
+  }
+  function speakButton(label, text, lang, cls) {
+    var b = h('button', { class: cls || 'btn small', attrs: { 'data-speak': text, 'data-label': label }, onclick: function () { speak(text, lang); } });
+    b.textContent = speakingKey === text ? '⏹ Stop' : label;
+    if (speakingKey === text) b.classList.add('speaking');
+    return b;
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stopSpeaking(); });
+  var closeModal = UI.closeModal;
+  UI.closeModal = function () { if (document.querySelector('#modal-box [data-speak]')) stopSpeaking(); closeModal(); };
 
   function alertCard(item) {
     var a = item.a, st = item.st, tr = I18N.translateAlert(a, SG.lang());
@@ -198,7 +226,7 @@
       h('ul', null, tr.instructions.map(function (s) { return h('li', { text: s }); }))));
     body.push(h('div', { class: 'muted small', text: t('alerts.issued', { time: SG.fmtTime(a.issuedAt || a.onset) }) + ' · ' + t('alerts.until', { time: SG.fmtTime(a.expires) }) }));
     body.push(h('div', { class: 'btn-row' },
-      h('button', { class: 'btn small', text: '🔊 ' + t('alerts.listen'), onclick: function () { speak(tr.event + '. ' + tr.severity + '. ' + tr.instructions.join(' ')); } })));
+      speakButton('🔊 ' + t('alerts.listen'), tr.event + '. ' + tr.severity + '. ' + tr.instructions.join(' '))));
     body.push(h('details', { class: 'original' },
       h('summary', { text: t('alerts.official') + ' (' + origLang.name + ')' }),
       h('div', { class: 'orig-text', attrs: { lang: a.originalLang, dir: origLang.dir } },
@@ -590,7 +618,7 @@
       h('div', { class: 'phrase-translit', text: p[1] }),
       h('div', { class: 'phrase-meaning', text: t('ph.' + id) }),
       h('div', { class: 'btn-row' },
-        h('button', { class: 'btn', text: '🔊', attrs: { 'aria-label': t('alerts.listen') }, onclick: function () { try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(p[0]); u.lang = 'ta-IN'; speechSynthesis.speak(u); } catch (e) { /* */ } } }),
+        speakButton('🔊', p[0], 'ta-IN', 'btn'),
         h('button', { class: 'btn ghost', text: t('common.close'), onclick: UI.closeModal }))
     ], { cls: 'phrase' });
   }
@@ -633,6 +661,10 @@
             UI.toast(ok ? '✅ ' + t('off.ready') : t('off.fail'), ok ? 'ok' : 'warn');
             renderMore();
           });
+        } }),
+        h('p', { class: 'muted small', text: '💾 ' + (pack ? (pack.tiles || 0) + ' map tiles · ' : '') + 'Stored inside this browser on your phone (not in your Downloads or gallery).' }),
+        h('button', { class: 'btn ghost', text: '🗑️ Delete offline map', onclick: function () {
+          SG.deleteOfflineMap().then(function () { UI.toast('🗑️ Offline map deleted', 'ok'); renderMore(); });
         } })
       ]),
       section('🔔 ' + t('notif.enable'), h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: SG.prefs.notif, onchange: function (e) {

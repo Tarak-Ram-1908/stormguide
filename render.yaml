@@ -11,8 +11,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: AUTHORITY_PIN
-        sync: false          # you type it in the Render dashboard; keep it secret
+      - key: HOST_EMAILS
+        value: "lokesh09006@gmail.com,alaharitarak@gmail.com"   # founding control-room hosts
       - key: SESSION_SECRET
         generateValue: true  # signs control-room login tokens
       - key: SMS_NUMBER

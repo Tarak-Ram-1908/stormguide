@@ -9,8 +9,8 @@
   'use strict';
   var h = UI.h, T = function (k, v) { return I18N.t('en', k, v); };
   var VOC = I18N.VOCAB;
-  var token = null;
-  try { token = sessionStorage.getItem('sg.token'); } catch (e) { token = null; }
+  var token = null, me = null;
+  try { token = sessionStorage.getItem('sg.token'); me = sessionStorage.getItem('sg.me'); } catch (e) { token = null; }
   var state = null, overview = null, panel = 'sos', map = null, layers = {}, es = null;
   var seenSos = {}, firstLoad = true;
   var alertDraft = null, previewLang = 'fr';
@@ -24,7 +24,7 @@
       cache: 'no-store'
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (r.status === 401 && url !== '/api/auth') { logout(); throw new Error('Session expired — log in again'); }
+        if (r.status === 401 && url !== '/api/auth' && url !== '/api/admin/pin') { logout(); throw new Error('Session expired — log in again'); }
         if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
         return d;
       });
@@ -51,10 +51,11 @@
     document.getElementById('login').hidden = false;
     document.getElementById('app').hidden = true;
     document.getElementById('logout').hidden = true;
+    document.getElementById('change-pin').hidden = true;
   }
   function logout() {
-    token = null;
-    try { sessionStorage.removeItem('sg.token'); } catch (e) { /* */ }
+    token = null; me = null;
+    try { sessionStorage.removeItem('sg.token'); sessionStorage.removeItem('sg.me'); } catch (e) { /* */ }
     if (es) { es.close(); es = null; }
     showLogin();
   }
@@ -62,17 +63,56 @@
   document.getElementById('login-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var pin = document.getElementById('pin').value;
-    api('POST', '/api/auth', { pin: pin }).then(function (d) {
-      token = d.token;
-      try { sessionStorage.setItem('sg.token', token); } catch (x) { /* */ }
+    var email = document.getElementById('email').value.trim();
+    api('POST', '/api/auth', { email: email, pin: pin }).then(function (d) {
+      token = d.token; me = d.email;
+      try { sessionStorage.setItem('sg.token', token); sessionStorage.setItem('sg.me', me); } catch (x) { /* */ }
+      document.getElementById('pin').value = '';
       start();
+      if (d.mustChangePin) setTimeout(function () { changePin(true); }, 400);
     }).catch(function (err) { document.getElementById('login-error').textContent = err.message; });
   });
+
+  document.getElementById('request-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var out = document.getElementById('request-result');
+    api('POST', '/api/access-request', {
+      name: document.getElementById('rq-name').value, email: document.getElementById('rq-email').value.trim(),
+      reason: document.getElementById('rq-reason').value, pin: document.getElementById('rq-pin').value
+    }).then(function () {
+      out.className = 'small ok-text';
+      out.textContent = '✅ Request sent. The hosts have been notified. Log in with this email and PIN after approval.';
+      e.target.reset();
+    }).catch(function (err) { out.className = 'small warn-text'; out.textContent = '❌ ' + err.message; });
+  });
+
+  function changePin(first) {
+    var cur = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'Current PIN', autocomplete: 'current-password' } });
+    var n1 = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'New PIN (min 4 characters)', autocomplete: 'new-password' } });
+    var n2 = h('input', { class: 'input', type: 'password', attrs: { placeholder: 'Repeat new PIN', autocomplete: 'new-password' } });
+    var err = h('div', { class: 'warn-text' });
+    UI.modal([
+      h('h2', { text: '🔑 Change your PIN' }),
+      first ? h('p', { class: 'warn-text', text: 'You are still using the initial PIN. Please set your own PIN now.' }) : null,
+      h('p', { class: 'muted small', text: 'Logged in as ' + me }),
+      cur, n1, n2, err,
+      h('div', { class: 'btn-row' },
+        h('button', { class: 'btn primary', text: 'Save PIN', onclick: function () {
+          if (n1.value !== n2.value) { err.textContent = 'The new PINs do not match'; return; }
+          api('POST', '/api/admin/pin', { currentPin: cur.value, newPin: n1.value }).then(function () { UI.closeModal(); UI.toast('✅ PIN changed', 'ok'); })
+            .catch(function (x) { err.textContent = x.message; });
+        } }),
+        h('button', { class: 'btn ghost', text: first ? 'Later' : 'Cancel', onclick: UI.closeModal }))
+    ]);
+  }
+  document.getElementById('change-pin').addEventListener('click', function () { changePin(false); });
 
   function start() {
     document.getElementById('login').hidden = true;
     document.getElementById('app').hidden = false;
     document.getElementById('logout').hidden = false;
+    document.getElementById('change-pin').hidden = false;
+    document.getElementById('logout').textContent = 'Log out' + (me ? ' (' + me.split('@')[0] + ')' : '');
     initMap();
     reload();
     connect();
@@ -92,6 +132,11 @@
     es.addEventListener('hello', function () { setNet(true); soon(); });
     es.addEventListener('version', soon);
     es.addEventListener('sos', soon);
+    es.addEventListener('access', function (e) {
+      var d = {}; try { d = JSON.parse(e.data); } catch (x) { /* */ }
+      if (d.name) { beep(); UI.toast('👥 Access request from ' + d.name + ' (' + d.email + ')', 'danger', 8000); }
+      soon();
+    });
     es.onerror = function () { setNet(false); };
   }
 
@@ -128,6 +173,7 @@
       overview.simulation.running || state.scenario === 'simulation' ? stat('Simulation', 'step ' + overview.simulation.step + '/' + overview.simulation.total, false) : null);
     document.getElementById('sos-count').textContent = s.sosOpen || '';
     document.getElementById('rep-count').textContent = s.reportsUnverified || '';
+    document.getElementById('host-count').textContent = s.accessRequests || '';
   }
   function stat(label, val, hot) { return h('div', { class: 'stat' + (hot ? ' hot' : '') }, h('b', { text: String(val) }), h('span', { class: 'muted small', text: label })); }
 
@@ -213,6 +259,7 @@
 
   function renderPanel() {
     if (!state || !overview) return;
+    if (panel === 'hosts') return pHosts();
     var fn = { sos: pSos, reports: pReports, alert: pAlert, zones: pZones, shelters: pShelters, rumors: pRumors, sms: pSms, sim: pSim }[panel];
     // Don't wipe a form the official is typing into on every live update.
     var active = document.activeElement;
@@ -353,7 +400,7 @@
       area: { name: d.areaName || 'Affected area', polygon: d.polygon }, expiresInHours: d.expiresInHours
     }), d.id ? 'Alert updated — phones notified' : 'Alert published — phones notified').then(function () { alertDraft = newDraft(); renderPanelForce(); });
   }
-  function renderPanelForce() { UI.mount('panel', ({ sos: pSos, reports: pReports, alert: pAlert, zones: pZones, shelters: pShelters, rumors: pRumors, sms: pSms, sim: pSim })[panel]()); }
+  function renderPanelForce() { if (panel === 'hosts') return pHosts(); UI.mount('panel', ({ sos: pSos, reports: pReports, alert: pAlert, zones: pZones, shelters: pShelters, rumors: pRumors, sms: pSms, sim: pSim })[panel]()); }
 
   // ---- Zones & roads
   var zoneDraft = { kind: 'flooded', name: '', radius: 0.3 };
@@ -460,6 +507,31 @@
         h('button', { class: 'btn', text: '☀️ Calm city', onclick: function () { if (confirmReset()) act(api('POST', '/api/admin/reset', { scenario: 'chennai-calm' }), 'Calm city loaded'); } })),
       h('p', { class: 'fineprint', text: 'Reset clears SOS requests and reports too.' }));
   }
+  // ---- Hosts (who may use the control room)
+  function pHosts() {
+    api('GET', '/api/admin/hosts').then(function (d) {
+      if (panel !== 'hosts') return;
+      UI.mount('panel',
+        h('div', { class: 'card' }, h('h3', { text: '👥 Access requests (' + d.requests.length + ')' }),
+          d.requests.length ? d.requests.map(function (r) {
+            return h('div', { class: 'list-row' },
+              h('div', null, h('strong', { text: r.name }), h('div', { class: 'muted small', text: r.email + ' · ' + age(r.createdAt) }), r.reason ? h('div', { class: 'claim', text: r.reason }) : null),
+              h('div', { class: 'inline' },
+                h('button', { class: 'btn small primary', text: '✔ Approve', onclick: function () { act(api('POST', '/api/admin/requests/' + r.id, { action: 'approve' }), r.email + ' is now a host').then(pHosts); } }),
+                h('button', { class: 'btn small', text: '✖ Reject', onclick: function () { act(api('POST', '/api/admin/requests/' + r.id, { action: 'reject' }), 'Request rejected').then(pHosts); } })));
+          }) : h('div', { class: 'muted', text: 'No pending requests. People can ask for access from the login page.' })),
+        h('div', { class: 'card' }, h('h3', { text: 'Current hosts (' + d.hosts.length + ')' }),
+          d.hosts.map(function (x) {
+            return h('div', { class: 'list-row' },
+              h('div', null, h('strong', { text: x.email + (x.email === d.me ? ' (you)' : '') }), h('div', { class: 'muted small', text: x.founder ? 'Founding host' : 'Added by ' + x.addedBy + ' · ' + age(x.addedAt) })),
+              !x.founder ? h('button', { class: 'btn small', text: 'Remove', onclick: function () { if (window.confirm('Remove ' + x.email + ' as host?')) act(api('DELETE', '/api/admin/hosts/' + encodeURIComponent(x.email)), 'Host removed').then(pHosts); } }) : null);
+          }),
+          h('div', { class: 'btn-row' }, h('button', { class: 'btn', text: '🔑 Change my PIN', onclick: function () { changePin(false); } }))),
+        h('p', { class: 'fineprint', text: 'New requests make a sound and a pop-up here. If the server has an email key configured (RESEND_API_KEY), every host also gets an email.' }));
+    }).catch(function (e) { UI.toast('❌ ' + e.message, 'danger'); });
+    return null;
+  }
+
   function confirmReset() { return window.confirm('Reset all data to the selected scenario?'); }
 
   // ------------------------------------------------------------ boot

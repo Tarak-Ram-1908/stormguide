@@ -198,7 +198,7 @@ details summary { cursor: pointer; color: var(--primary); font-weight: 600; font
 .hot-num { font-weight: 800; color: var(--danger); white-space: nowrap; }
 
 /* ---------- map */
-.map { height: calc(100vh - 230px); min-height: 320px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
+.map { height: calc(100vh - 250px); height: calc(100svh - 250px); min-height: 320px; touch-action: none; overscroll-behavior: contain; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
 .map.picking { cursor: crosshair; outline: 4px solid var(--accent); }
 .map-tools { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin-bottom: 8px; padding-bottom: 2px; }
 .map-tools .btn { flex: 0 0 auto; white-space: nowrap; }
@@ -267,3 +267,5 @@ details summary { cursor: pointer; color: var(--primary); font-weight: 600; font
 .noscript { padding: 20px; background: #c92a2a; color: #fff; font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.btn.speaking { background: var(--danger); color: #fff; border-color: transparent; }
