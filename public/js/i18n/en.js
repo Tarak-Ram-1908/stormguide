@@ -163,6 +163,7 @@
   'ai.safe': 'Am I safe?',
   'ai.ask': 'Ask',
   'sun.mode': 'Sunlight mode', 'sun.on': 'Sunlight mode on: black on white, readable in bright sun at low brightness', 'sun.off': 'Normal colours',
+  'ai.injury': "If you are badly hurt, bleeding heavily or cannot move safely, call 108 (ambulance) or send an SOS and choose 'Injured'. Otherwise: stop and rest somewhere dry and above the water; do not walk through flood water with an injury or open wound; keep the wound clean, dry and raised; ask for first aid at a shelter or hospital.",
   'install': 'Install app',
   'relay.title': 'Help relay an emergency message',
   'relay.desc': 'Someone without internet asked you to pass on this message. It will be sent to the control room.',

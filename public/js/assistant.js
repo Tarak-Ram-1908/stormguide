@@ -17,9 +17,10 @@
   // Keywords per intent. Latin words match whole words; other scripts match as substrings.
   var INTENTS = {
     sos: ['help me', 'sos', 'trapped', 'rescue', 'save me', 'stuck', 'aide', 'ayuda', 'hilfe', 'socorro', '救命', '助けて', 'मदद', 'बचाओ', 'உதவி', 'காப்பாற்று', 'సహాయం', 'కాపాడండి', 'مساعدة', 'النجدة'],
+    injury: ['injured', 'injury', 'hurt', 'bleeding', 'blood', 'wound', 'fracture', 'sprain', 'twisted', 'knee', 'ankle', 'leg', 'arm', 'pain', 'burn', 'faint', 'fainted', 'unconscious', 'dizzy', 'first aid', 'medical', 'sick', 'fever', 'blessé', 'blessure', 'saigne', 'douleur', 'herido', 'herida', 'sangre', 'dolor', 'verletzt', 'verletzung', 'blutet', 'schmerz', '受伤', '流血', '疼', '骨折', 'けが', '怪我', '出血', '痛', 'घायल', 'चोट', 'खून', 'दर्द', 'காயம்', 'இரத்த', 'வலி', 'గాయ', 'రక్త', 'నొప్పి', 'مصاب', 'جرح', 'نزيف', 'ألم'],
     shelter: ['shelter', 'shelters', 'camp', 'relief', 'refuge', 'where to go', 'where should i go', 'safe place', 'sleep', 'stay', 'evacuate', 'abri', 'abris', 'refugio', 'albergue', 'unterkunft', 'notunterkunft', '避难', '避難', 'शिविर', 'आश्रय', 'राहत', 'முகாம்', 'நிவாரண', 'ఆశ్రయ', 'శిబిర', 'ملجأ', 'ملاجئ', 'مأوى'],
     safety: ['safe', 'safety', 'danger', 'dangerous', 'risk', 'am i', 'flood near', 'flooded near', 'sécurité', 'sûr', 'danger', 'peligro', 'seguro', 'gefahr', 'sicher', '安全', '危险', '危険', 'सुरक्षित', 'ख़तरा', 'खतरा', 'பாதுகாப்ப', 'ஆபத்து', 'సురక్షిత', 'ప్రమాద', 'آمن', 'بأمان', 'خطر'],
-    alerts: ['alert', 'alerts', 'warning', 'warnings', 'what to do', 'what should i do', 'instruction', 'advice', 'official', 'alerte', 'consigne', 'aviso', 'alerta', 'warnung', '预警', '警报', '警報', 'चेतावनी', 'क्या करें', 'எச்சரிக்கை', 'என்ன செய்ய', 'హెచ్చరిక', 'ఏం చేయాలి', 'تنبيه', 'تحذير', 'ماذا أفعل'],
+    alerts: ['alert', 'alerts', 'warning', 'warnings', 'what to do', 'what should i do', 'instruction', 'advice', 'official', 'precaution', 'precautions', 'precautionary', 'prepare', 'tips', 'alerte', 'consigne', 'aviso', 'alerta', 'warnung', '预警', '警报', '警報', 'चेतावनी', 'क्या करें', 'எச்சரிக்கை', 'என்ன செய்ய', 'హెచ్చరిక', 'ఏం చేయాలి', 'تنبيه', 'تحذير', 'ماذا أفعل'],
     numbers: ['number', 'numbers', 'call', 'phone number', 'police', 'ambulance', 'fire', 'hospital', 'doctor', 'emergency', 'helpline', '112', '108', 'numéro', 'urgence', 'hôpital', 'policía', 'ambulancia', 'hospital', 'polizei', 'krankenhaus', 'notruf', 'arzt', '电话', '医院', '救护', '警察', '病院', '救急', 'पुलिस', 'एम्बुलेंस', 'अस्पताल', 'नंबर', 'காவல்', 'ஆம்புலன்ஸ்', 'மருத்துவமனை', 'எண்', 'పోలీస్', 'అంబులెన్స్', 'ఆసుపత్రి', 'నంబర్', 'مستشفى', 'إسعاف', 'شرطة', 'رقم'],
     transport: ['metro', 'train', 'trains', 'bus', 'buses', 'airport', 'flight', 'flights', 'transport', 'taxi', 'mrts', 'suburban', 'railway', 'gare', 'avion', 'aéroport', 'tren', 'autobús', 'aeropuerto', 'vuelo', 'zug', 'flughafen', 'flug', '地铁', '机场', '火车', '航班', '電車', '空港', '地下鉄', 'मेट्रो', 'ट्रेन', 'बस', 'हवाई', 'உள்ளூர் ரயில்', 'ரயில்', 'பேருந்து', 'விமான', 'మెట్రో', 'రైలు', 'బస్సు', 'విమాన', 'مطار', 'قطار', 'حافلة', 'رحلة'],
     rumor: ['rumor', 'rumour', 'true', 'fake', 'real', 'heard', 'whatsapp', 'forward', 'is it true', 'burst', 'dam', 'lake', 'rumeur', 'vrai', 'faux', 'rumor', 'verdad', 'falso', 'gerücht', 'wahr', '谣言', '真的', '噂', '本当', 'अफ़वाह', 'अफवाह', 'सच', 'வதந்தி', 'உண்மை', 'పుకారు', 'నిజం', 'شائعة', 'صحيح'],
@@ -59,7 +60,8 @@
     Object.keys(INTENTS).forEach(function (k) {
       var s = hits(q, INTENTS[k]);
       if (k === 'phrase' && s) s += 1;   // "how do I say water" is about the phrase, not water
-      if (k === 'sos' && s) s += 1;      // urgent requests win ties
+      if (k === 'sos' && s) s += 3;      // urgent requests win
+      if (k === 'injury' && s) s += 2;   // "hurt my knee in the storm" is about the injury, not the weather
       if (s > bestScore) { best = k; bestScore = s; }
     });
     return best;
@@ -89,6 +91,17 @@
       return [line('🆘 ' + t('sos.title'), 'strong'), line(t('sos.stay')),
         h('div', { class: 'btn-row' }, btn('🆘 ' + t('tab.sos'), function () { goTab('sos'); }, 'danger'), h('a', { class: 'btn small', text: '📞 ' + t('sos.call'), attrs: { href: 'tel:112' } }))];
     },
+    injury: function () {
+      var local = I18N.PHRASES_LOCAL[(SG.state && SG.state.region.localLang) || 'ta'] || I18N.PHRASES_LOCAL.ta;
+      var out = [line('🩹 ' + t('ph.injured'), 'strong'), line(t('ai.injury')),
+        h('a', { class: 'ai-call first', attrs: { href: 'tel:108' } }, h('span', { class: 'hot-num', text: '📞 108' }), h('span', { text: t('hot.108') })),
+        h('a', { class: 'ai-call', attrs: { href: 'tel:112' } }, h('span', { class: 'hot-num', text: '📞 112' }), h('span', { text: t('hot.112') })),
+        h('div', { class: 'btn-row' }, btn('🆘 ' + t('tab.sos'), function () { goTab('sos'); }, 'danger'))];
+      var near = point() && SG.shelters().filter(function (x) { return x.s.status === 'open' && !x.inDanger && x.d != null && x.d <= 50; })[0];
+      if (near) out.push(line(t('shelter.nearest'), 'strong'), shelterLine(near));
+      out.push(h('div', { class: 'ai-item' }, h('div', { class: 'ai-phrase', attrs: { lang: 'ta' }, text: local.injured[0] }), h('div', { class: 'muted small', text: local.injured[1] + ' — ' + t('ph.injured') })));
+      return out;
+    },
     shelter: function () {
       if (!point()) return [line(t('shelter.nearest'), 'strong')].concat(needLocation());
       var list = SG.shelters().filter(function (x) { return x.s.status === 'open' && !x.inDanger; });
@@ -103,6 +116,7 @@
     safety: function () {
       if (!point()) return needLocation();
       var r = SG.risk(), out = [];
+      if (r.distFromRegion > 50) return [line(t('loc.far', { dist: SG.fmtDist(r.distFromRegion) }), 'warn'), h('div', { class: 'btn-row' }, btn('🎯 ' + t('loc.demo'), function () { goTab('status'); }))];
       if (r.level === 'inside') out.push(line('⚠️ ' + t('risk.inside'), 'danger'), line(t('zone.' + r.zone.kind) + ': ' + r.zone.name));
       else if (r.level === 'near') out.push(line('⚠️ ' + t('risk.near', { dist: SG.fmtDist(r.distKm) }), 'warn'), line(t('zone.' + r.zone.kind) + ': ' + r.zone.name));
       else out.push(line('✅ ' + t('risk.clear'), 'ok'));
@@ -217,7 +231,10 @@
     UI.mount(box, log.map(function (m) {
       return m.who === 'me' ? h('div', { class: 'ai-msg me', attrs: { dir: 'auto' }, text: m.text }) : h('div', { class: 'ai-msg bot' }, m.nodes);
     }));
-    box.scrollTop = box.scrollHeight;
+    var mine = box.querySelectorAll('.ai-msg.me');
+    var last = mine[mine.length - 1];
+    function scroll() { box.scrollTop = last ? last.offsetTop - box.offsetTop - 4 : box.scrollHeight; if (last && last.scrollIntoView) last.scrollIntoView({ block: 'nearest' }); }
+    scroll(); requestAnimationFrame(scroll);
   }
   function answer(text, intentOverride) {
     var intent = intentOverride || classify(text);
@@ -233,9 +250,9 @@
     if (log.length > 30) log = log.slice(-30);
     render();
   }
-  var CHIPS = ['safety', 'shelter', 'alerts', 'numbers', 'transport', 'rumor', 'supplies', 'phrase'];
+  var CHIPS = ['injury', 'safety', 'shelter', 'alerts', 'numbers', 'transport', 'rumor', 'supplies', 'phrase'];
   function chipLabel(k) {
-    return { safety: t('ai.safe'), shelter: t('shelter.nearest'), alerts: t('alerts.what'), numbers: t('hot.title'), transport: t('tr.title'), rumor: t('rumor.title'), supplies: t('ph.water'), phrase: t('phr.title') }[k] || k;
+    return { injury: '🩹 ' + t('ph.injured'), safety: t('ai.safe'), shelter: t('shelter.nearest'), alerts: t('alerts.what'), numbers: t('hot.title'), transport: t('tr.title'), rumor: t('rumor.title'), supplies: t('ph.water'), phrase: t('phr.title') }[k] || k;
   }
   function chips() {
     return h('div', { class: 'chip-row ai-chips' }, CHIPS.map(function (k) { return h('button', { class: 'chip', text: chipLabel(k), onclick: function () { ask(k, true); } }); }));

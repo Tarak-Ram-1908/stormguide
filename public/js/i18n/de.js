@@ -163,6 +163,7 @@
   'ai.safe': 'Bin ich sicher?',
   'ai.ask': 'Fragen',
   'sun.mode': 'Sonnenmodus', 'sun.on': 'Sonnenmodus an: Schwarz auf Weiß, lesbar in praller Sonne bei geringer Helligkeit', 'sun.off': 'Normale Farben',
+  'ai.injury': "Wenn Sie schwer verletzt sind, stark bluten oder sich nicht sicher bewegen können, rufen Sie 108 (Rettungsdienst) an oder senden Sie ein SOS mit „Verletzt“. Sonst: an einem trockenen Ort oberhalb des Wassers ausruhen; mit einer Verletzung oder offenen Wunde nicht durch Hochwasser gehen; die Wunde sauber, trocken und hochgelagert halten; in einer Unterkunft oder einem Krankenhaus um Erste Hilfe bitten.",
   'install': 'App installieren',
   'relay.title': 'Helfen Sie, eine Notfallnachricht weiterzuleiten',
   'relay.desc': 'Jemand ohne Internet bittet Sie, diese Nachricht weiterzugeben. Sie wird an die Leitstelle gesendet.',

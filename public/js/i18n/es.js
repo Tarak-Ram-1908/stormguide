@@ -163,6 +163,7 @@
   'ai.safe': '¿Estoy a salvo?',
   'ai.ask': 'Preguntar',
   'sun.mode': 'Modo sol', 'sun.on': 'Modo sol activado: negro sobre blanco, legible a pleno sol con poco brillo', 'sun.off': 'Colores normales',
+  'ai.injury': "Si estás gravemente herido, sangras mucho o no puedes moverte con seguridad, llama al 108 (ambulancia) o envía un SOS eligiendo «Herido». Si no: descansa en un lugar seco y por encima del agua; no camines por agua de inundación con una herida abierta; mantén la herida limpia, seca y elevada; pide primeros auxilios en un refugio o en un hospital.",
   'install': 'Instalar app',
   'relay.title': 'Ayuda a transmitir un mensaje de emergencia',
   'relay.desc': 'Alguien sin internet te pide que transmitas este mensaje. Se enviará al centro de control.',

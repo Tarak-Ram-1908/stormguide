@@ -163,6 +163,7 @@
   'ai.safe': 'Suis-je en sécurité ?',
   'ai.ask': 'Demander',
   'sun.mode': 'Mode plein soleil', 'sun.on': 'Mode plein soleil activé : noir sur blanc, lisible au soleil même avec peu de luminosité', 'sun.off': 'Couleurs normales',
+  'ai.injury': "Si vous êtes gravement blessé, saignez beaucoup ou ne pouvez pas vous déplacer en sécurité, appelez le 108 (ambulance) ou envoyez un SOS en choisissant « Blessé ». Sinon : reposez-vous dans un endroit sec, au-dessus de l'eau ; ne marchez pas dans l'eau de crue avec une blessure ou une plaie ouverte ; gardez la plaie propre, sèche et surélevée ; demandez les premiers secours dans un abri ou un hôpital.",
   'install': 'Installer l’appli',
   'relay.title': 'Aidez à transmettre un message d’urgence',
   'relay.desc': 'Une personne sans Internet vous demande de transmettre ce message. Il sera envoyé au centre de contrôle.',
