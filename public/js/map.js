@@ -32,10 +32,7 @@
       var pending = null;
       new ResizeObserver(function () { clearTimeout(pending); pending = setTimeout(function () { map.invalidateSize({ pan: false }); }, 100); }).observe(container);
     }
-    L.tileLayer(SG.tileUrl, {
-      maxZoom: 18, minZoom: 9, crossOrigin: true, keepBuffer: 4, updateWhenZooming: false,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    UI.addTiles(map, { minZoom: 9, keepBuffer: 4, updateWhenZooming: false });
     ['alerts', 'zones', 'closures', 'reports', 'shelters'].forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
     // "My location" button on the map itself (always visible, no scrolling).
     var Locate = L.Control.extend({

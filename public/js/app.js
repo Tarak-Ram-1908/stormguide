@@ -301,8 +301,17 @@
     });
   }
 
+  // The assistant box is built once per language so typing is never wiped by a live update.
+  function renderAsk() {
+    var box = document.getElementById('ask');
+    if (!box || !window.Assistant) return;
+    if (box.firstChild && box.getAttribute('data-lang') === SG.lang()) return;
+    box.setAttribute('data-lang', SG.lang());
+    UI.mount(box, Assistant.entry());
+  }
+
   function renderStatus() {
-    renderRisk(); renderShelter(); renderTips(); renderAlerts(); renderTransport(); renderRumors();
+    renderRisk(); renderAsk(); renderShelter(); renderTips(); renderAlerts(); renderTransport(); renderRumors();
     var demo = SG.state && SG.state.region.demo;
     UI.mount('demo-note', demo ? '🧪 ' + t('demo.badge') : null);
   }

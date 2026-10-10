@@ -92,7 +92,7 @@ self.addEventListener('fetch', function (event) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
 
-  if (url.hostname === 'tile.openstreetmap.org') { event.respondWith(tile(req)); return; }
+  if (url.hostname === 'tile.openstreetmap.org' || /\.basemaps\.cartocdn\.com$/.test(url.hostname)) { event.respondWith(tile(req)); return; }
   if (url.origin !== self.location.origin) return; // weather API etc.: straight to network
 
   if (url.pathname === '/api/state') { event.respondWith(networkFirst(req, DATA_CACHE, url.searchParams.has('wait') ? 20000 : 4000, '/api/state')); return; }

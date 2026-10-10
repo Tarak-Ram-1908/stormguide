@@ -134,15 +134,16 @@ function serveStatic(req, res, pathname) {
 
 function securityHeaders(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  // Map tile servers require a Referer (OSM blocks requests without one); send only our origin, never the path.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Permissions-Policy', 'geolocation=(self), camera=(), microphone=()');
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'", // Leaflet positions elements with inline styles
-    "img-src 'self' data: blob: https://tile.openstreetmap.org",
-    "connect-src 'self' https://tile.openstreetmap.org https://api.open-meteo.com",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.basemaps.cartocdn.com",
+    "connect-src 'self' https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://api.open-meteo.com",
     "worker-src 'self'", "manifest-src 'self'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"
   ].join('; '));
   if ((req.headers['x-forwarded-proto'] || '') === 'https') {

@@ -187,7 +187,7 @@
   function initMap() {
     if (map) return;
     map = L.map('map').setView([13.03, 80.235], 12);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, crossOrigin: true, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    UI.addTiles(map);
     ['alerts', 'zones', 'closures', 'shelters', 'reports', 'sos', 'draw'].forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
     map.on('click', function (e) {
       if (!draw) return;

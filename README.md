@@ -40,7 +40,8 @@ Everything the traveller needs keeps working with **no network at all**: the app
 3. **Store-carry-forward QR relay.** With no signal at all, the phone shows a QR code holding the SOS. Anyone nearby scans it with their camera and their phone forwards it. If they are offline too, it waits in their outbox (a delay-tolerant network made of people).
 4. **Privacy-preserving risk.** The server publishes zones. Each phone checks for itself whether it is inside or near one (point-in-polygon, distance to edge). A traveller's location never leaves the phone unless they send an SOS or a report.
 5. **Prefetch on warning.** When a Severe or Extreme alert reaches your area, the app downloads the map tiles around you and the nearest shelters by itself, so the map still works when the network drops mid-storm.
-6. **Crowd reports with honest labels.** Reports show "Not checked by officials" until verified, show how many independent devices confirmed them, and can be marked false. This turns the rumor problem into a feature.
+6. **Offline travel assistant.** "Ask StormGuide" on the Status screen answers questions like *"where is the nearest shelter?"*, *"is the metro running?"*, *"is the dam burst true?"* or *"how do I say I need water?"* in any of the 10 languages, with no internet. It runs entirely on the phone: a small multilingual intent matcher picks the topic, then the answer is built from the data synced at the last connection (shelters, zones, alerts, transport, rumors, closures, weather, hotlines, phrases) using the app's pre-translated strings. Because it reads the live app state, it is up to date the moment the phone reconnects. It never generates free text, so it cannot invent a shelter or a safety instruction. We chose this over a downloaded language model on purpose: a 1–2 GB model would not fit the offline-first, low-battery, low-end-phone use case, and a crisis tool must not hallucinate.
+7. **Crowd reports with honest labels.** Reports show "Not checked by officials" until verified, show how many independent devices confirmed them, and can be marked false. This turns the rumor problem into a feature.
 
 ## 4. Feature checklist
 
@@ -56,6 +57,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 - 📣 Reports: 7 types, offline queue, SMS and QR fallbacks, "I see this too" confirmations (one per device)
 - 🕵️ Rumor check with translated topic + verdict and the original claim
 - 🚇 Transport status (metro, trains, buses, airport)
+- 💬 Offline assistant: ask in your own language; answers come from data saved on the phone, with "Guide me", map and call buttons
 - 🗣️ Phrase cards in Tamil with transliteration and read-aloud ("I need help", "Where is the nearest relief shelter?"…)
 - ✅ "I'm safe" message to family (share sheet, SMS, WhatsApp)
 - ♿ Needs profile: step-free access, children, older people, with tailored tips
@@ -95,7 +97,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 | App shell (HTML, JS, CSS, icons, Leaflet) | Precached at install; cache name includes a build hash computed from the files, so every deploy updates clients |
 | Page navigation | Network first, 3 s timeout, then cached page |
 | `/api/state` | Network first, 4 s timeout, then cached copy marked `X-SG-From-Cache` so the UI says "offline" |
-| Map tiles (OpenStreetMap) | Cache first; filled while browsing, by "Download map" and automatically on severe warnings; capped at 3000 tiles |
+| Map tiles (CARTO, OpenStreetMap fallback) | Cache first; filled while browsing, by "Download map" and automatically on severe warnings; capped at 3000 tiles |
 | POST (SOS, reports) | IndexedDB outbox → immediate send → Background Sync → retry on `online`, on app start and every 45 s |
 
 ## 6. Edge cases we handle
@@ -145,7 +147,7 @@ npm test             # 28 unit + API tests (node:test, no extra packages)
 |---|---|---|
 | `PORT` | `3000` | HTTP port (Render sets it automatically) |
 | `HOST_EMAILS` | `lokesh09006@gmail.com,alaharitarak@gmail.com` | Founding control-room hosts (comma-separated). Only hosts can change data |
-| `INITIAL_PIN` | `2026` | First PIN for founding hosts; each host is asked to change it after logging in |
+| `INITIAL_PIN` | `2026` | First password for founding hosts; each host must replace it on first login |
 | `RESEND_API_KEY` / `NOTIFY_FROM` | empty | Optional: email all hosts when someone requests access (via resend.com). Without it, hosts get a sound + pop-up in the control room |
 | `SESSION_SECRET` | random at boot | Signs control-room tokens (set it so logins survive restarts) |
 | `SMS_NUMBER` | empty | Number that receives coded SOS SMS. If empty, the traveller picks a recipient (e.g. family); the SMS includes a Google Maps link so a person can read it |
@@ -183,9 +185,10 @@ Other hosts: `Procfile` (Railway, Heroku-style) and `Dockerfile` (Koyeb, Fly.io,
 ### Control-room access (hosts)
 
 - Only **hosts** can change alerts, zones, shelters, transport, rumors, reports and SOS status. Travellers can only *send* reports and SOS; every `/api/admin/*` endpoint checks a signed host token.
-- Founding hosts: the emails in `HOST_EMAILS`. Log in with email + PIN (initial `2026`); the console asks you to set your own PIN (stored as a salted scrypt hash).
-- Anyone else opens `/authority.html` → **Request access** (name, email, reason, chosen PIN). All logged-in hosts get a sound and a pop-up, and an email if `RESEND_API_KEY` is set. Any host can **approve** or **reject** in the **👥 Hosts** tab, and remove added hosts. Founding hosts cannot be removed; a removed host loses access immediately.
+- Founding hosts: the emails in `HOST_EMAILS`. Log in with email + password (initial `2026`). You must set your own password before the console opens: at least 6 characters, with letters and numbers (stored as a salted scrypt hash).
+- Anyone else opens `/authority.html` → **Request access** (name, email, reason, chosen password). All logged-in hosts get a sound and a pop-up, and an email if `RESEND_API_KEY` is set. Any host can **approve** or **reject** in the **👥 Hosts** tab, and remove added hosts. Founding hosts cannot be removed; a removed host loses access immediately.
 - Brute-force protection: login is rate-limited per IP and per email.
+- No SQL injection surface: there is no SQL database. Accounts are looked up by exact email key and passwords are compared as salted hashes, so input like `' OR '1'='1` is just a wrong password (covered by a test).
 - ⚠️ On Render's free plan the disk is temporary: after a restart or redeploy, approved hosts and changed PINs go back to the defaults. For permanent accounts, add `HOST_EMAILS` entries in Render → Environment, or attach a persistent disk / database.
 
 ## 10. Libraries, APIs and data (disclosure)
@@ -194,13 +197,14 @@ Other hosts: `Procfile` (Railway, Heroku-style) and `Dockerfile` (Koyeb, Fly.io,
 |---|---|---|
 | [Leaflet 1.9.4](https://leafletjs.com) (built from the official v1.9.4 source, vendored) | Interactive maps | BSD-2-Clause |
 | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase (vendored) | QR codes for the offline relay | MIT |
-| [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles | Map background | ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) respected: small, user-triggered prefetch only (≤ 450 tiles) |
+| [CARTO Voyager](https://carto.com/basemaps) basemap tiles (OpenStreetMap data) | Map background | © OpenStreetMap contributors © CARTO; free basemap usage terms |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles | Fallback map background if CARTO fails | ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) respected: referrer sent, small user-triggered prefetch only (≤ 300 tiles) |
 | [Open-Meteo](https://open-meteo.com) forecast API | Automatic weather card | CC BY 4.0, free, no API key |
 | IMD rainfall categories | Weather thresholds | India Meteorological Department public criteria |
 | Browser APIs | Service Worker, Cache Storage, IndexedDB, Background Sync, Geolocation, DeviceOrientation, Web Speech, Notifications, Web Share | Standard web platform |
 | Node.js built-ins | `http`, `fs`, `crypto`, `zlib`, `node:test` | MIT |
 
-No paid APIs, no API keys, no AI or machine-translation service at runtime. Translations of the fixed vocabulary were written by the team during the hackathon. In production they should be reviewed by native speakers.
+No paid APIs, no API keys, no cloud AI or machine-translation service at runtime (the offline assistant is our own on-device code). Translations of the fixed vocabulary were written by the team during the hackathon. In production they should be reviewed by native speakers.
 
 ## 11. Honest limitations and next steps
 
@@ -222,7 +226,7 @@ public/index.html      traveller app
 public/authority.html  control-room console
 public/relay.html      QR relay page
 public/sw.js           service worker
-public/js/             core.js, app.js, map.js, ui.js, db.js, geo.js, i18n.js, i18n/*.js, smscode.js, authority.js, relay.js
+public/js/             core.js, app.js, map.js, ui.js, db.js, geo.js, i18n.js, i18n/*.js, smscode.js, assistant.js, authority.js, relay.js
 public/vendor/         Leaflet, qrcode-generator (+ licenses)
 test/                  geometry, SMS + translation, API tests
 render.yaml            Render blueprint · Procfile · Dockerfile

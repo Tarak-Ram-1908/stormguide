@@ -346,8 +346,7 @@
   };
 
   // ------------------------------------------------------------ offline map pack
-  var TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-  SG.tileUrl = TILE_URL;
+  // Tile URLs come from UI.TILES (ui.js).
   var packing = false;
   /**
    * Download a small set of map tiles around the person and the nearest
@@ -359,17 +358,17 @@
     packing = true;
     var center = SG.point() || SG.state.region.center;
     var tiles = Geo.tilesAround(SG.state.region.center, 14, 11, 12)
-      .concat(Geo.tilesAround(center, 2, 13, 16));
+      .concat(Geo.tilesAround(center, 1.5, 13, 16));
     SG.shelters().filter(function (x) { return x.s.status === 'open'; }).slice(0, 2).forEach(function (x) {
       tiles = tiles.concat(Geo.tilesAround(x.pt, 0.6, 15, 16));
     });
     var seen = {};
-    tiles = tiles.filter(function (t) { var k = t.z + '/' + t.x + '/' + t.y; if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 450);
+    tiles = tiles.filter(function (t) { var k = t.z + '/' + t.x + '/' + t.y; if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 300);
     var done = 0, ok = 0, i = 0;
     function worker() {
       if (i >= tiles.length) return Promise.resolve();
       var t = tiles[i++];
-      var url = TILE_URL.replace('{z}', t.z).replace('{x}', t.x).replace('{y}', t.y);
+      var url = UI.tileUrl(t.z, t.x, t.y);
       return fetchWithTimeout(url, { mode: 'cors', cache: 'default' }, 10000).then(function (r) { if (r.ok || r.type === 'opaque') ok++; }, function () { /* skip */ })
         .then(function () { done++; if (onProgress) onProgress(Math.round(done * 100 / tiles.length)); return worker(); });
     }

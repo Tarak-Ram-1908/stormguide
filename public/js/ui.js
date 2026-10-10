@@ -100,6 +100,37 @@
     return function () { if (el.parentNode) el.parentNode.removeChild(el); };
   };
 
+  /**
+   * Map tiles. Primary: CARTO Voyager (built for app use, light travel-style look).
+   * Fallback: OpenStreetMap's own servers, used automatically if CARTO keeps failing.
+   */
+  UI.TILES = {
+    primary: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', subdomains: 'abcd', attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
+    fallback: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', subdomains: '', attribution: '&copy; OpenStreetMap contributors' }
+  };
+  UI.tileUrl = function (z, x, y, which) {
+    var t = UI.TILES[which || 'primary'];
+    var sub = t.subdomains ? t.subdomains[(x + y) % t.subdomains.length] : '';
+    return t.url.replace('{s}', sub).replace('{z}', z).replace('{x}', x).replace('{y}', y);
+  };
+  UI.addTiles = function (map, extra) {
+    function make(which) {
+      var t = UI.TILES[which];
+      return L.tileLayer(t.url, Object.assign({ subdomains: t.subdomains || 'abc', attribution: t.attribution, crossOrigin: true, referrerPolicy: 'strict-origin-when-cross-origin', maxZoom: 18 }, extra || {}));
+    }
+    var layer = make('primary').addTo(map), errors = 0, switched = false;
+    layer.on('tileerror', function () {
+      errors++;
+      if (!switched && errors >= 6 && navigator.onLine !== false) {
+        switched = true;
+        map.removeLayer(layer);
+        layer = make('fallback').addTo(map);
+      }
+    });
+    layer.on('tileload', function () { errors = 0; });
+    return layer;
+  };
+
   /** base64url for UTF-8 JSON (used in QR relay links). */
   UI.b64encode = function (obj) {
     var s = unescape(encodeURIComponent(JSON.stringify(obj)));
