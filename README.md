@@ -97,7 +97,7 @@ Everything the traveller needs keeps working with **no network at all**: the app
 | App shell (HTML, JS, CSS, icons, Leaflet) | Precached at install; cache name includes a build hash computed from the files, so every deploy updates clients |
 | Page navigation | Network first, 3 s timeout, then cached page |
 | `/api/state` | Network first, 4 s timeout, then cached copy marked `X-SG-From-Cache` so the UI says "offline" |
-| Map tiles (CARTO, OpenStreetMap fallback) | Cache first; filled while browsing, by "Download map" and automatically on severe warnings; capped at 3000 tiles |
+| Map tiles (OpenStreetMap, OSM France fallback) | Cache first; filled while browsing, by "Download map" and automatically on severe warnings; capped at 3000 tiles |
 | POST (SOS, reports) | IndexedDB outbox → immediate send → Background Sync → retry on `online`, on app start and every 45 s |
 
 ## 6. Edge cases we handle
@@ -197,8 +197,8 @@ Other hosts: `Procfile` (Railway, Heroku-style) and `Dockerfile` (Koyeb, Fly.io,
 |---|---|---|
 | [Leaflet 1.9.4](https://leafletjs.com) (built from the official v1.9.4 source, vendored) | Interactive maps | BSD-2-Clause |
 | [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase (vendored) | QR codes for the offline relay | MIT |
-| [CARTO Voyager](https://carto.com/basemaps) basemap tiles (OpenStreetMap data) | Map background | © OpenStreetMap contributors © CARTO; free basemap usage terms |
-| [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles | Fallback map background if CARTO fails | ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) respected: referrer sent, small user-triggered prefetch only (≤ 300 tiles) |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles | Map background | ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) respected: Referer sent, tiles cached, small user-triggered prefetch only (≤ 300 tiles) |
+| [OSM France / Humanitarian (HOT)](https://www.openstreetmap.fr) tiles | Backup map background if OSM tiles fail | ODbL, © OpenStreetMap contributors |
 | [Open-Meteo](https://open-meteo.com) forecast API | Automatic weather card | CC BY 4.0, free, no API key |
 | IMD rainfall categories | Weather thresholds | India Meteorological Department public criteria |
 | Browser APIs | Service Worker, Cache Storage, IndexedDB, Background Sync, Geolocation, DeviceOrientation, Web Speech, Notifications, Web Share | Standard web platform |

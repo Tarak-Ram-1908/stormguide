@@ -105,8 +105,8 @@
    * Fallback: OpenStreetMap's own servers, used automatically if CARTO keeps failing.
    */
   UI.TILES = {
-    primary: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', subdomains: 'abcd', attribution: '&copy; OpenStreetMap contributors &copy; CARTO' },
-    fallback: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', subdomains: '', attribution: '&copy; OpenStreetMap contributors' }
+    primary: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', subdomains: '', attribution: '&copy; OpenStreetMap contributors' },
+    fallback: { url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', subdomains: 'abc', attribution: '&copy; OpenStreetMap contributors, tiles: OSM France / HOT' }
   };
   UI.tileUrl = function (z, x, y, which) {
     var t = UI.TILES[which || 'primary'];

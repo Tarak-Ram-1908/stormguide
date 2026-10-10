@@ -384,7 +384,7 @@
   SG.deleteOfflineMap = function () {
     SG.prefs.offlinePack = null; SG.savePrefs();
     if (!('caches' in root)) return Promise.resolve();
-    return caches.delete('sg-tiles-v1').catch(function () { /* ignore */ });
+    return Promise.all(['sg-tiles-v1', 'sg-tiles-v2'].map(function (n) { return caches.delete(n); })).catch(function () { /* ignore */ });
   };
 
   // ------------------------------------------------------------ weather (automatic, clearly not official)

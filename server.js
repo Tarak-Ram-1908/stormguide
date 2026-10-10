@@ -142,8 +142,8 @@ function securityHeaders(req, res) {
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'", // Leaflet positions elements with inline styles
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.basemaps.cartocdn.com",
-    "connect-src 'self' https://tile.openstreetmap.org https://*.basemaps.cartocdn.com https://api.open-meteo.com",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.fr",
+    "connect-src 'self' https://tile.openstreetmap.org https://*.tile.openstreetmap.fr https://api.open-meteo.com",
     "worker-src 'self'", "manifest-src 'self'", "frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"
   ].join('; '));
   if ((req.headers['x-forwarded-proto'] || '') === 'https') {

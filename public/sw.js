@@ -15,7 +15,7 @@ var BUILD = '__BUILD_ID__';
 var SHELL = __SHELL_FILES__;
 var SHELL_CACHE = 'sg-shell-' + BUILD;
 var DATA_CACHE = 'sg-data-v1';
-var TILE_CACHE = 'sg-tiles-v1';
+var TILE_CACHE = 'sg-tiles-v2';   // v2: drops tiles cached from a provider that started returning placeholder images
 var MAX_TILES = 3000;
 
 importScripts('/js/db.js');
@@ -31,7 +31,7 @@ self.addEventListener('install', function (event) {
 self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k.indexOf('sg-shell-') === 0 && k !== SHELL_CACHE; })
+      return Promise.all(keys.filter(function (k) { return (k.indexOf('sg-shell-') === 0 && k !== SHELL_CACHE) || (k.indexOf('sg-tiles-') === 0 && k !== TILE_CACHE); })
         .map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
@@ -80,7 +80,8 @@ function tile(request) {
     return cache.match(request).then(function (hit) {
       if (hit) return hit;
       return fetch(request).then(function (res) {
-        if (res && (res.ok || res.type === 'opaque')) { cache.put(request, res.clone()); if (Math.random() < 0.02) trimTiles(); }
+        if (res && res.ok) {   // never cache error or opaque responses (an 'access blocked' tile would stick forever)
+          cache.put(request, res.clone()); if (Math.random() < 0.02) trimTiles(); }
         return res;
       });
     });
@@ -92,7 +93,7 @@ self.addEventListener('fetch', function (event) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
 
-  if (url.hostname === 'tile.openstreetmap.org' || /\.basemaps\.cartocdn\.com$/.test(url.hostname)) { event.respondWith(tile(req)); return; }
+  if (url.hostname === 'tile.openstreetmap.org' || /^[abc]\.tile\.openstreetmap\.fr$/.test(url.hostname)) { event.respondWith(tile(req)); return; }
   if (url.origin !== self.location.origin) return; // weather API etc.: straight to network
 
   if (url.pathname === '/api/state') { event.respondWith(networkFirst(req, DATA_CACHE, url.searchParams.has('wait') ? 20000 : 4000, '/api/state')); return; }
